@@ -1,5 +1,4 @@
 pandas
-time
 numpy
 nfl_data_py
 requests
