@@ -17,7 +17,7 @@ dash.register_page(
 # LOAD DATA (ONCE)
 # -------------------------------------------------
 
-df = pd.read_excel("data/2025 Team Stats.xlsx")
+df = pd.read_excel("data/2025_Team_Stats.xlsx")
 schedule = pd.read_excel("data/schedule.xlsx")
 
 week = 18
