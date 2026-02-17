@@ -2,7 +2,6 @@ pandas
 numpy
 nfl_data_py
 requests
-io
 plotly.express
 dash
 math
