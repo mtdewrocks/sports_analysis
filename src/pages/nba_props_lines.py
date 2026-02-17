@@ -18,13 +18,13 @@ register_page(
 # ------------------------------------------------------------
 # FILE PATHS
 # ------------------------------------------------------------
-stats_file = r"C:\Users\shawn\Python\Basketball\NBA Player Stats.xlsx"
-props_file = r"C:\Users\shawn\Python\Basketball\Basketball_Props.xlsx"
+stats_file = r"https://github.com/mtdewrocks/sports_analysis/tree/main/data/NBA Player Stats.parquet"
+props_file = r"https://github.com/mtdewrocks/sports_analysis/tree/main/data/Basketball_Props.xlsx"
 
 # ------------------------------------------------------------
 # LOAD DATA
 # ------------------------------------------------------------
-df_stats = pd.read_excel(stats_file)
+df_stats = pd.read_parquet(stats_file)
 df_props = pd.read_excel(props_file)
 
 # ------------------------------------------------------------

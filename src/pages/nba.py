@@ -14,7 +14,7 @@ register_page(
 # -------------------------------------------------
 # Load data ONCE
 # -------------------------------------------------
-stats_file = r"C:\Users\shawn\Python\sports_dash_app\data\NBA Player Stats.parquet"
+stats_file = r"https://github.com/mtdewrocks/sports_analysis/tree/main/data/NBA Player Stats.parquet"
 
 df_stats = pd.read_parquet(stats_file)
 df_stats.columns = (
