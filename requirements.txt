@@ -2,8 +2,8 @@ pandas
 time
 numpy
 nfl_data_py
-import requests
+requests
 io
 plotly.express
 dash
-import math
+math
