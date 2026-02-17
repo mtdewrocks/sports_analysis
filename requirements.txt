@@ -4,4 +4,5 @@ nfl_data_py
 requests
 plotly.express
 dash
+dash-bootstrap-components
 gunicorn
