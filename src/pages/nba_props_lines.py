@@ -4,6 +4,9 @@ import pandas as pd
 
 from dash import html, dcc, register_page
 import dash_table
+import os
+
+print(os.getcwd())
 
 # ------------------------------------------------------------
 # REGISTER PAGE
@@ -18,8 +21,8 @@ register_page(
 # ------------------------------------------------------------
 # FILE PATHS
 # ------------------------------------------------------------
-stats_file = r"https://github.com/mtdewrocks/sports_analysis/tree/main/data/NBA_Player_Stats.parquet"
-props_file = r"https://github.com/mtdewrocks/sports_analysis/tree/main/data/Basketball_Props.xlsx"
+stats_file = r"https://github.com/mtdewrocks/sports_analysis/raw/main/data/NBA_Player_Stats.parquet"
+props_file = r"https://github.com/mtdewrocks/sports_analysis/raw/main/data/Basketball_Props.xlsx"
 
 # ------------------------------------------------------------
 # LOAD DATA
