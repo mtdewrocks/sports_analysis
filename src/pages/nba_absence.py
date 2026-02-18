@@ -14,7 +14,7 @@ register_page(
 # -------------------------------------------------
 # Load data ONCE
 # -------------------------------------------------
-stats_file = r"https://github.com/mtdewrocks/sports_analysis/raw/main/data/NBA_Player_Stats.parquet"
+stats_file = r"https://raw.githubusercontent.com/mtdewrocks/sports_analysis/main/data/NBA_Player_Stats.parquet"
 df_stats = pd.read_parquet(stats_file)
 
 df_stats.columns = (

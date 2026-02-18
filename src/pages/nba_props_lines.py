@@ -21,8 +21,8 @@ register_page(
 # ------------------------------------------------------------
 # FILE PATHS
 # ------------------------------------------------------------
-stats_file = r"https://github.com/mtdewrocks/sports_analysis/raw/main/data/NBA_Player_Stats.parquet"
-props_file = r"https://github.com/mtdewrocks/sports_analysis/raw/main/data/Basketball_Props.xlsx"
+stats_file = r"https://raw.githubusercontent.com/mtdewrocks/sports_analysis/main/data/NBA_Player_Stats.parquet"
+props_file = r"https://raw.githubusercontent.com/mtdewrocks/sports_analysis/main/data/Basketball_Props.xlsx"
 
 # ------------------------------------------------------------
 # LOAD DATA
