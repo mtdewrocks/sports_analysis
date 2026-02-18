@@ -15,10 +15,11 @@ register_page(
 # -------------------------------------------------
 # Load data ONCE
 # -------------------------------------------------
-console.log("hello")
+
 print(f"The current directory is: {os.getcwd()}.")
 stats_file = r"https://raw.githubusercontent.com/mtdewrocks/sports_analysis/main/data/NBA_Player_Stats.parquet"
 
+print("read file")
 df_stats = pd.read_parquet(stats_file)
 df_stats.columns = (
     df_stats.columns
