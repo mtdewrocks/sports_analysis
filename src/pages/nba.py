@@ -1,5 +1,6 @@
 import pandas as pd
 from dash import html, dcc, register_page
+import os
 
 # -------------------------------------------------
 # Register Dash Page
@@ -14,6 +15,7 @@ register_page(
 # -------------------------------------------------
 # Load data ONCE
 # -------------------------------------------------
+print(f"The current directory is: {os.getcwd()}.")
 stats_file = r"https://github.com/mtdewrocks/sports_analysis/raw/main/data/NBA_Player_Stats.parquet"
 
 df_stats = pd.read_parquet(stats_file)
