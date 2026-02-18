@@ -1,6 +1,8 @@
-import pandas as pd
-from dash import html, dcc, register_page
 import os
+from functools import lru_cache
+
+import pandas as pd
+from dash import html, dcc, register_page, callback, Input, Output
 
 # -------------------------------------------------
 # Register Dash Page
@@ -13,20 +15,12 @@ register_page(
 )
 
 # -------------------------------------------------
-# Load data ONCE
+# Data config (do NOT load at import time)
 # -------------------------------------------------
 
-print(f"The current directory is: {os.getcwd()}.")
-stats_file = r"https://raw.githubusercontent.com/mtdewrocks/sports_analysis/main/data/NBA_Player_Stats.parquet"
-
-print("read file")
-df_stats = pd.read_parquet(stats_file)
-df_stats.columns = (
-    df_stats.columns
-    .str.strip()
-    .str.lower()
-    .str.replace(" ", "_")
-)
+# Keep your URL as a default; allow override via Render env var
+DEFAULT_STATS_FILE = "https://raw.githubusercontent.com/mtdewrocks/sports_analysis/main/data/NBA_Player_Stats.parquet"
+STATS_FILE = os.getenv("NBA_STATS_FILE", DEFAULT_STATS_FILE)
 
 player_col = "player"
 date_col = "game_date"
@@ -47,12 +41,34 @@ available_stats = {
     "pts_reb": "pts_reb",
 }
 
-def stats_player_options():
-    players = sorted(df_stats[player_col].dropna().unique())
-    return [{"label": p, "value": p} for p in players]
+
+@lru_cache(maxsize=1)
+def get_df_stats():
+    """
+    Load stats once per process. This is safe on Render because it only runs
+    when a callback needs it, not during module import.
+    """
+    print(f"[NBA] cwd={os.getcwd()}", flush=True)
+    print(f"[NBA] Loading parquet from: {STATS_FILE}", flush=True)
+
+    df = pd.read_parquet(STATS_FILE)
+
+    df.columns = (
+        df.columns
+        .str.strip()
+        .str.lower()
+        .str.replace(" ", "_")
+    )
+
+    # Optional: quick sanity checks in logs
+    print(f"[NBA] Loaded rows={len(df):,} cols={len(df.columns)}", flush=True)
+
+    return df
+
 
 def stats_stat_options():
     return [{"label": k.upper(), "value": v} for k, v in available_stats.items()]
+
 
 # -------------------------------------------------
 # PAGE LAYOUT
@@ -66,7 +82,7 @@ layout = html.Div([
         html.Label("Player"),
         dcc.Dropdown(
             id="nba-stats-player-dropdown",
-            options=stats_player_options(),
+            options=[],  # ✅ filled by callback below
             placeholder="Select a player",
             style={"marginBottom": "12px"},
             persistence=True,
@@ -116,6 +132,15 @@ layout = html.Div([
             id="nba-stats-range-note",
             style={"marginTop": "8px", "color": "#666", "fontSize": "12px"},
         ),
+
+        # ✅ Optional: show load errors on the page instead of crashing deploy
+        html.Div(
+            id="nba-data-load-status",
+            style={"marginTop": "12px", "color": "#b00020", "fontSize": "12px"},
+        ),
+
+        # hidden trigger to load players after page render
+        dcc.Interval(id="nba-init", interval=500, n_intervals=0, max_intervals=1),
     ],
     style={
         "width": "22%",
@@ -149,3 +174,23 @@ layout = html.Div([
     ],
     style={"marginLeft": "24%", "padding": "20px"}),
 ])
+
+
+# -------------------------------------------------
+# Callback: populate player dropdown safely (no import-time load)
+# -------------------------------------------------
+@callback(
+    Output("nba-stats-player-dropdown", "options"),
+    Output("nba-data-load-status", "children"),
+    Input("nba-init", "n_intervals"),
+)
+def populate_players(_):
+    try:
+        df_stats = get_df_stats()
+        players = sorted(df_stats[player_col].dropna().unique())
+        opts = [{"label": p, "value": p} for p in players]
+        return opts, ""  # no error
+    except Exception as e:
+        # Keep app alive and show error on the page + in logs
+        print(f"[NBA] ERROR loading data: {type(e).__name__}: {e}", flush=True)
+        return [], f"Error loading NBA data: {type(e).__name__}: {e}"

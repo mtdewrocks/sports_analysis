@@ -1,0 +1,208 @@
+2026-02-18T18:26:57.33674618Z              ~~~^^
+2026-02-18T18:26:57.336749669Z   File "/opt/render/project/src/.venv/lib/python3.14/site-packages/gunicorn/app/wsgiapp.py", line 66, in run
+2026-02-18T18:26:57.33675373Z     WSGIApplication("%(prog)s [OPTIONS] [APP_MODULE]", prog=prog).run()
+2026-02-18T18:26:57.33675632Z     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+2026-02-18T18:26:57.33675879Z   File "/opt/render/project/src/.venv/lib/python3.14/site-packages/gunicorn/app/base.py", line 235, in run
+2026-02-18T18:26:57.33676126Z     super().run()
+2026-02-18T18:26:57.3367638Z     ~~~~~~~~~~~^^
+2026-02-18T18:26:57.33676635Z   File "/opt/render/project/src/.venv/lib/python3.14/site-packages/gunicorn/app/base.py", line 71, in run
+2026-02-18T18:26:57.33676876Z     Arbiter(self).run()
+2026-02-18T18:26:57.33677118Z     ~~~~~~~^^^^^^
+2026-02-18T18:26:57.33677372Z   File "/opt/render/project/src/.venv/lib/python3.14/site-packages/gunicorn/arbiter.py", line 63, in __init__
+2026-02-18T18:26:57.33677617Z     self.setup(app)
+2026-02-18T18:26:57.3367787Z     ~~~~~~~~~~^^^^^
+2026-02-18T18:26:57.33678129Z   File "/opt/render/project/src/.venv/lib/python3.14/site-packages/gunicorn/arbiter.py", line 139, in setup
+2026-02-18T18:26:57.33678365Z     self.app.wsgi()
+2026-02-18T18:26:57.336785981Z     ~~~~~~~~~~~~~^^
+2026-02-18T18:26:57.33678867Z   File "/opt/render/project/src/.venv/lib/python3.14/site-packages/gunicorn/app/base.py", line 66, in wsgi
+2026-02-18T18:26:57.336791481Z     self.callable = self.load()
+2026-02-18T18:26:57.336794161Z                     ~~~~~~~~~^^
+2026-02-18T18:26:57.336796741Z   File "/opt/render/project/src/.venv/lib/python3.14/site-packages/gunicorn/app/wsgiapp.py", line 57, in load
+2026-02-18T18:26:57.336799021Z     return self.load_wsgiapp()
+2026-02-18T18:26:57.336801381Z            ~~~~~~~~~~~~~~~~~^^
+2026-02-18T18:26:57.336804451Z   File "/opt/render/project/src/.venv/lib/python3.14/site-packages/gunicorn/app/wsgiapp.py", line 47, in load_wsgiapp
+2026-02-18T18:26:57.336807661Z     return util.import_app(self.app_uri)
+2026-02-18T18:26:57.336810081Z            ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^
+2026-02-18T18:26:57.336812491Z   File "/opt/render/project/src/.venv/lib/python3.14/site-packages/gunicorn/util.py", line 377, in import_app
+2026-02-18T18:26:57.336815041Z     mod = importlib.import_module(module)
+2026-02-18T18:26:57.336822711Z   File "/opt/render/project/python/Python-3.14.3/lib/python3.14/importlib/__init__.py", line 88, in import_module
+2026-02-18T18:26:57.336825991Z     return _bootstrap._gcd_import(name[level:], package, level)
+2026-02-18T18:26:57.336828342Z            ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-02-18T18:26:57.336833832Z   File "<frozen importlib._bootstrap>", line 1398, in _gcd_import
+2026-02-18T18:26:57.336836342Z   File "<frozen importlib._bootstrap>", line 1371, in _find_and_load
+2026-02-18T18:26:57.336838822Z   File "<frozen importlib._bootstrap>", line 1342, in _find_and_load_unlocked
+2026-02-18T18:26:57.336841332Z   File "<frozen importlib._bootstrap>", line 938, in _load_unlocked
+2026-02-18T18:26:57.336843852Z   File "<frozen importlib._bootstrap_external>", line 759, in exec_module
+2026-02-18T18:26:57.336846452Z   File "<frozen importlib._bootstrap>", line 491, in _call_with_frames_removed
+2026-02-18T18:26:57.336863363Z   File "/opt/render/project/src/src/app.py", line 16, in <module>
+2026-02-18T18:26:57.336866312Z     dash_app = Dash(
+2026-02-18T18:26:57.336868883Z         __name__,
+2026-02-18T18:26:57.336871443Z     ...<4 lines>...
+2026-02-18T18:26:57.336874143Z         url_base_pathname="/dash/",  # Dash lives under /dash/
+2026-02-18T18:26:57.336876793Z     )
+2026-02-18T18:26:57.336879523Z   File "/opt/render/project/src/.venv/lib/python3.14/site-packages/dash/dash.py", line 639, in __init__
+2026-02-18T18:26:57.336882213Z     self.init_app()
+2026-02-18T18:26:57.336885013Z     ~~~~~~~~~~~~~^^
+2026-02-18T18:26:57.336887973Z   File "/opt/render/project/src/.venv/lib/python3.14/site-packages/dash/dash.py", line 752, in init_app
+2026-02-18T18:26:57.336890823Z     self.enable_pages()
+2026-02-18T18:26:57.336893863Z     ~~~~~~~~~~~~~~~~~^^
+2026-02-18T18:26:57.336896763Z   File "/opt/render/project/src/.venv/lib/python3.14/site-packages/dash/dash.py", line 2535, in enable_pages
+2026-02-18T18:26:57.336899403Z     _import_layouts_from_pages(self.config.pages_folder)
+2026-02-18T18:26:57.336902133Z     ~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-02-18T18:26:57.336904864Z   File "/opt/render/project/src/.venv/lib/python3.14/site-packages/dash/_pages.py", line 442, in _import_layouts_from_pages
+2026-02-18T18:26:57.336908004Z     spec.loader.exec_module(page_module)  # type: ignore[reportOptionalMemberAccess]
+2026-02-18T18:26:57.336910474Z     ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+2026-02-18T18:26:57.336913224Z   File "<frozen importlib._bootstrap_external>", line 759, in exec_module
+2026-02-18T18:26:57.336915844Z   File "<frozen importlib._bootstrap>", line 491, in _call_with_frames_removed
+2026-02-18T18:26:57.336918204Z   File "/opt/render/project/src/src/pages/nba.py", line 23, in <module>
+2026-02-18T18:26:57.336920854Z     df_stats = pd.read_parquet(stats_file)
+2026-02-18T18:26:57.336923804Z   File "/opt/render/project/src/.venv/lib/python3.14/site-packages/pandas/io/parquet.py", line 671, in read_parquet
+2026-02-18T18:26:57.336926494Z     return impl.read(
+2026-02-18T18:26:57.336929824Z            ~~~~~~~~~^
+2026-02-18T18:26:57.336931574Z         path,
+2026-02-18T18:26:57.336933334Z         ^^^^^
+2026-02-18T18:26:57.336936444Z     ...<6 lines>...
+2026-02-18T18:26:57.336939344Z         **kwargs,
+2026-02-18T18:26:57.336941925Z         ^^^^^^^^^
+2026-02-18T18:26:57.336944865Z     )
+2026-02-18T18:26:57.336947785Z     ^
+2026-02-18T18:26:57.336950315Z   File "/opt/render/project/src/.venv/lib/python3.14/site-packages/pandas/io/parquet.py", line 388, in read
+2026-02-18T18:26:57.336952885Z     handles = get_handle(
+2026-02-18T18:26:57.336955435Z         path, "rb", is_text=False, storage_options=storage_options
+2026-02-18T18:26:57.336957975Z     )
+2026-02-18T18:26:57.336960615Z   File "/opt/render/project/src/.venv/lib/python3.14/site-packages/pandas/io/common.py", line 772, in get_handle
+2026-02-18T18:26:57.336963145Z     ioargs = _get_filepath_or_buffer(
+2026-02-18T18:26:57.336965785Z         path_or_buf,
+2026-02-18T18:26:57.336968525Z     ...<3 lines>...
+2026-02-18T18:26:57.336971095Z         storage_options=storage_options,
+2026-02-18T18:26:57.336973885Z     )
+2026-02-18T18:26:57.336976545Z   File "/opt/render/project/src/.venv/lib/python3.14/site-packages/pandas/io/common.py", line 404, in _get_filepath_or_buffer
+2026-02-18T18:26:57.336979175Z     with urlopen(req_info) as req:
+2026-02-18T18:26:57.336981806Z          ~~~~~~~^^^^^^^^^^
+2026-02-18T18:26:57.336984555Z   File "/opt/render/project/src/.venv/lib/python3.14/site-packages/pandas/io/common.py", line 281, in urlopen
+2026-02-18T18:26:57.336993376Z     return urllib.request.urlopen(*args, **kwargs)  # noqa: TID251
+2026-02-18T18:26:57.336996096Z            ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+2026-02-18T18:26:57.336998946Z   File "/opt/render/project/python/Python-3.14.3/lib/python3.14/urllib/request.py", line 187, in urlopen
+2026-02-18T18:26:57.337001366Z     return opener.open(url, data, timeout)
+2026-02-18T18:26:57.337003856Z            ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+2026-02-18T18:26:57.337006356Z   File "/opt/render/project/python/Python-3.14.3/lib/python3.14/urllib/request.py", line 493, in open
+2026-02-18T18:26:57.337008926Z     response = meth(req, response)
+2026-02-18T18:26:57.337024477Z   File "/opt/render/project/python/Python-3.14.3/lib/python3.14/urllib/request.py", line 602, in http_response
+2026-02-18T18:26:57.337027187Z     response = self.parent.error(
+2026-02-18T18:26:57.337029557Z         'http', request, response, code, msg, hdrs)
+2026-02-18T18:26:57.337031957Z   File "/opt/render/project/python/Python-3.14.3/lib/python3.14/urllib/request.py", line 531, in error
+2026-02-18T18:26:57.337034587Z     return self._call_chain(*args)
+2026-02-18T18:26:57.337037147Z            ~~~~~~~~~~~~~~~~^^^^^^^
+2026-02-18T18:26:57.337039707Z   File "/opt/render/project/python/Python-3.14.3/lib/python3.14/urllib/request.py", line 464, in _call_chain
+2026-02-18T18:26:57.337042217Z     result = func(*args)
+2026-02-18T18:26:57.337052287Z   File "/opt/render/project/python/Python-3.14.3/lib/python3.14/urllib/request.py", line 611, in http_error_default
+2026-02-18T18:26:57.337054937Z     raise HTTPError(req.full_url, code, msg, hdrs, fp)
+2026-02-18T18:26:57.337057408Z urllib.error.HTTPError: HTTP Error 404: Not Found
+2026-02-18T18:27:02.048669043Z ==> Exited with status 1
+2026-02-18T18:27:02.051177584Z ==> Common ways to troubleshoot your deploy: https://render.com/docs/troubleshooting-deploys
+2026-02-18T18:27:03.355637647Z ==> Running 'gunicorn --chdir src app:server'
+2026-02-18T18:27:06.70552645Z The current directory is: /opt/render/project/src/src.
+2026-02-18T18:27:06.70554607Z read file
+2026-02-18T18:27:06.727070073Z Traceback (most recent call last):
+2026-02-18T18:27:06.73122445Z   File "/opt/render/project/src/.venv/bin/gunicorn", line 7, in <module>
+2026-02-18T18:27:06.73124211Z     sys.exit(run())
+2026-02-18T18:27:06.731245781Z              ~~~^^
+2026-02-18T18:27:06.73124971Z   File "/opt/render/project/src/.venv/lib/python3.14/site-packages/gunicorn/app/wsgiapp.py", line 66, in run
+2026-02-18T18:27:06.731254481Z     WSGIApplication("%(prog)s [OPTIONS] [APP_MODULE]", prog=prog).run()
+2026-02-18T18:27:06.731257291Z     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+2026-02-18T18:27:06.731260111Z   File "/opt/render/project/src/.venv/lib/python3.14/site-packages/gunicorn/app/base.py", line 235, in run
+2026-02-18T18:27:06.731263001Z     super().run()
+2026-02-18T18:27:06.731265491Z     ~~~~~~~~~~~^^
+2026-02-18T18:27:06.731268471Z   File "/opt/render/project/src/.venv/lib/python3.14/site-packages/gunicorn/app/base.py", line 71, in run
+2026-02-18T18:27:06.731288991Z     Arbiter(self).run()
+2026-02-18T18:27:06.731292032Z     ~~~~~~~^^^^^^
+2026-02-18T18:27:06.731295532Z   File "/opt/render/project/src/.venv/lib/python3.14/site-packages/gunicorn/arbiter.py", line 63, in __init__
+2026-02-18T18:27:06.731298602Z     self.setup(app)
+2026-02-18T18:27:06.731301462Z     ~~~~~~~~~~^^^^^
+2026-02-18T18:27:06.731304422Z   File "/opt/render/project/src/.venv/lib/python3.14/site-packages/gunicorn/arbiter.py", line 139, in setup
+2026-02-18T18:27:06.731307302Z     self.app.wsgi()
+2026-02-18T18:27:06.731310052Z     ~~~~~~~~~~~~~^^
+2026-02-18T18:27:06.731312902Z   File "/opt/render/project/src/.venv/lib/python3.14/site-packages/gunicorn/app/base.py", line 66, in wsgi
+2026-02-18T18:27:06.731316542Z     self.callable = self.load()
+2026-02-18T18:27:06.731319532Z                     ~~~~~~~~~^^
+2026-02-18T18:27:06.731322192Z   File "/opt/render/project/src/.venv/lib/python3.14/site-packages/gunicorn/app/wsgiapp.py", line 57, in load
+2026-02-18T18:27:06.731324652Z     return self.load_wsgiapp()
+2026-02-18T18:27:06.731327052Z            ~~~~~~~~~~~~~~~~~^^
+2026-02-18T18:27:06.731330313Z   File "/opt/render/project/src/.venv/lib/python3.14/site-packages/gunicorn/app/wsgiapp.py", line 47, in load_wsgiapp
+2026-02-18T18:27:06.731333133Z     return util.import_app(self.app_uri)
+2026-02-18T18:27:06.731335353Z            ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^
+2026-02-18T18:27:06.731337613Z   File "/opt/render/project/src/.venv/lib/python3.14/site-packages/gunicorn/util.py", line 377, in import_app
+2026-02-18T18:27:06.731339993Z     mod = importlib.import_module(module)
+2026-02-18T18:27:06.731342153Z   File "/opt/render/project/python/Python-3.14.3/lib/python3.14/importlib/__init__.py", line 88, in import_module
+2026-02-18T18:27:06.731344633Z     return _bootstrap._gcd_import(name[level:], package, level)
+2026-02-18T18:27:06.731346783Z            ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-02-18T18:27:06.731349453Z   File "<frozen importlib._bootstrap>", line 1398, in _gcd_import
+2026-02-18T18:27:06.731352143Z   File "<frozen importlib._bootstrap>", line 1371, in _find_and_load
+2026-02-18T18:27:06.731354483Z   File "<frozen importlib._bootstrap>", line 1342, in _find_and_load_unlocked
+2026-02-18T18:27:06.731356933Z   File "<frozen importlib._bootstrap>", line 938, in _load_unlocked
+2026-02-18T18:27:06.731359463Z   File "<frozen importlib._bootstrap_external>", line 759, in exec_module
+2026-02-18T18:27:06.731361953Z   File "<frozen importlib._bootstrap>", line 491, in _call_with_frames_removed
+2026-02-18T18:27:06.731376714Z   File "/opt/render/project/src/src/app.py", line 16, in <module>
+2026-02-18T18:27:06.731379954Z     dash_app = Dash(
+2026-02-18T18:27:06.731382714Z         __name__,
+2026-02-18T18:27:06.731385674Z     ...<4 lines>...
+2026-02-18T18:27:06.731388604Z         url_base_pathname="/dash/",  # Dash lives under /dash/
+2026-02-18T18:27:06.731391394Z     )
+2026-02-18T18:27:06.731394754Z   File "/opt/render/project/src/.venv/lib/python3.14/site-packages/dash/dash.py", line 639, in __init__
+2026-02-18T18:27:06.731397664Z     self.init_app()
+2026-02-18T18:27:06.731400434Z     ~~~~~~~~~~~~~^^
+2026-02-18T18:27:06.731403325Z   File "/opt/render/project/src/.venv/lib/python3.14/site-packages/dash/dash.py", line 752, in init_app
+2026-02-18T18:27:06.731406185Z     self.enable_pages()
+2026-02-18T18:27:06.731409285Z     ~~~~~~~~~~~~~~~~~^^
+2026-02-18T18:27:06.731411805Z   File "/opt/render/project/src/.venv/lib/python3.14/site-packages/dash/dash.py", line 2535, in enable_pages
+2026-02-18T18:27:06.731414235Z     _import_layouts_from_pages(self.config.pages_folder)
+2026-02-18T18:27:06.731416675Z     ~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-02-18T18:27:06.731419115Z   File "/opt/render/project/src/.venv/lib/python3.14/site-packages/dash/_pages.py", line 442, in _import_layouts_from_pages
+2026-02-18T18:27:06.731422835Z     spec.loader.exec_module(page_module)  # type: ignore[reportOptionalMemberAccess]
+2026-02-18T18:27:06.731425605Z     ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+2026-02-18T18:27:06.731428265Z   File "<frozen importlib._bootstrap_external>", line 759, in exec_module
+2026-02-18T18:27:06.731430935Z   File "<frozen importlib._bootstrap>", line 491, in _call_with_frames_removed
+2026-02-18T18:27:06.731433405Z   File "/opt/render/project/src/src/pages/nba.py", line 23, in <module>
+2026-02-18T18:27:06.731436705Z     df_stats = pd.read_parquet(stats_file)
+2026-02-18T18:27:06.731454636Z   File "/opt/render/project/src/.venv/lib/python3.14/site-packages/pandas/io/parquet.py", line 671, in read_parquet
+2026-02-18T18:27:06.731457886Z     return impl.read(
+2026-02-18T18:27:06.731460536Z            ~~~~~~~~~^
+2026-02-18T18:27:06.731463346Z         path,
+2026-02-18T18:27:06.731465816Z         ^^^^^
+2026-02-18T18:27:06.731468296Z     ...<6 lines>...
+2026-02-18T18:27:06.731470776Z         **kwargs,
+2026-02-18T18:27:06.731473356Z         ^^^^^^^^^
+2026-02-18T18:27:06.731476126Z     )
+2026-02-18T18:27:06.731478676Z     ^
+2026-02-18T18:27:06.731481436Z   File "/opt/render/project/src/.venv/lib/python3.14/site-packages/pandas/io/parquet.py", line 388, in read
+2026-02-18T18:27:06.731483616Z     handles = get_handle(
+2026-02-18T18:27:06.731485397Z         path, "rb", is_text=False, storage_options=storage_options
+2026-02-18T18:27:06.731487597Z     )
+2026-02-18T18:27:06.731490357Z   File "/opt/render/project/src/.venv/lib/python3.14/site-packages/pandas/io/common.py", line 772, in get_handle
+2026-02-18T18:27:06.731493237Z     ioargs = _get_filepath_or_buffer(
+2026-02-18T18:27:06.731495867Z         path_or_buf,
+2026-02-18T18:27:06.731498427Z     ...<3 lines>...
+2026-02-18T18:27:06.731500997Z         storage_options=storage_options,
+2026-02-18T18:27:06.731503567Z     )
+2026-02-18T18:27:06.731506577Z   File "/opt/render/project/src/.venv/lib/python3.14/site-packages/pandas/io/common.py", line 404, in _get_filepath_or_buffer
+2026-02-18T18:27:06.731509407Z     with urlopen(req_info) as req:
+2026-02-18T18:27:06.731512297Z          ~~~~~~~^^^^^^^^^^
+2026-02-18T18:27:06.731515197Z   File "/opt/render/project/src/.venv/lib/python3.14/site-packages/pandas/io/common.py", line 281, in urlopen
+2026-02-18T18:27:06.731525178Z     return urllib.request.urlopen(*args, **kwargs)  # noqa: TID251
+2026-02-18T18:27:06.731528488Z            ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+2026-02-18T18:27:06.731531268Z   File "/opt/render/project/python/Python-3.14.3/lib/python3.14/urllib/request.py", line 187, in urlopen
+2026-02-18T18:27:06.731533878Z     return opener.open(url, data, timeout)
+2026-02-18T18:27:06.731536508Z            ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+2026-02-18T18:27:06.731539738Z   File "/opt/render/project/python/Python-3.14.3/lib/python3.14/urllib/request.py", line 493, in open
+2026-02-18T18:27:06.731542758Z     response = meth(req, response)
+2026-02-18T18:27:06.731545528Z   File "/opt/render/project/python/Python-3.14.3/lib/python3.14/urllib/request.py", line 602, in http_response
+2026-02-18T18:27:06.731548598Z     response = self.parent.error(
+2026-02-18T18:27:06.731551408Z         'http', request, response, code, msg, hdrs)
+2026-02-18T18:27:06.731554358Z   File "/opt/render/project/python/Python-3.14.3/lib/python3.14/urllib/request.py", line 531, in error
+2026-02-18T18:27:06.731557249Z     return self._call_chain(*args)
+2026-02-18T18:27:06.731560258Z            ~~~~~~~~~~~~~~~~^^^^^^^
+2026-02-18T18:27:06.731566749Z   File "/opt/render/project/python/Python-3.14.3/lib/python3.14/urllib/request.py", line 464, in _call_chain
+2026-02-18T18:27:06.731569749Z     result = func(*args)
+2026-02-18T18:27:06.731572839Z   File "/opt/render/project/python/Python-3.14.3/lib/python3.14/urllib/request.py", line 611, in http_error_default
+2026-02-18T18:27:06.731575489Z     raise HTTPError(req.full_url, code, msg, hdrs, fp)
+2026-02-18T18:27:06.731590059Z urllib.error.HTTPError: HTTP Error 404: Not Found

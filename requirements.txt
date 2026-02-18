@@ -6,3 +6,5 @@ plotly.express
 dash
 dash-bootstrap-components
 gunicorn
+openpyxl
+pyarrow
