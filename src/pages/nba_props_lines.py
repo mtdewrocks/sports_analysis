@@ -2,8 +2,7 @@ import math
 import numpy as np
 import pandas as pd
 
-from dash import html, dcc, register_page
-import dash_table
+from dash import html, dcc, register_page, dash_table
 import os
 
 print(os.getcwd())
