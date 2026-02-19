@@ -1,7 +1,11 @@
-print("NFL PAGE LOADED")
+import os
+from functools import lru_cache
+from pathlib import Path
+from io import BytesIO
 
 import pandas as pd
-from dash import html, dcc, register_page
+import requests
+from dash import html, dcc, register_page, callback, Input, Output
 
 # -------------------------------------------------
 # Register Dash Page
@@ -14,38 +18,86 @@ register_page(
 )
 
 # -------------------------------------------------
-# Load data ONCE
+# Data config (DO NOT LOAD AT IMPORT TIME)
 # -------------------------------------------------
-stats_file = r"C:\Users\shawn\Python\Football\2025\Player_Stats_Weekly.parquet"
 
-df_stats = pd.read_parquet(stats_file)
-df_stats.columns = (
-    df_stats.columns
-    .str.strip()
-    .str.lower()
-    .str.replace(" ", "_")
-)
+BASE_DIR = Path(__file__).resolve().parents[1]  # .../src
+DEFAULT_STATS_FILE = BASE_DIR / "data" / "Player_Stats_Weekly.parquet"
+
+# Allow override (Render env var). This can be a local path OR a URL.
+STATS_FILE = os.getenv("NFL_STATS_FILE", str(DEFAULT_STATS_FILE))
+
+# Optional: for private GitHub repos (or any protected endpoint)
+GITHUB_TOKEN = os.getenv("GITHUB_TOKEN", "")
 
 player_col = "player_display_name"
 date_col = "week"
-location_col = "location"   # If your NFL file has home/away, update this
+location_col = "location"  # update if your file differs
 
-# -------------------------------------------------
-# Available stats
-# -------------------------------------------------
-BASE_STATS = ["completions", "attempts", "passing_yards","passing_tds","passing_interceptions","carries",
-              "rushing_yards","rushing_tds","receptions","receiving_yards"]
+BASE_STATS = [
+    "completions", "attempts", "passing_yards", "passing_tds", "passing_interceptions",
+    "carries", "rushing_yards", "rushing_tds",
+    "receptions", "receiving_yards"
+]
 
-available_stats = {
-    stat: stat for stat in BASE_STATS if stat in df_stats.columns
-}
 
-def stats_player_options():
-    players = sorted(df_stats[player_col].dropna().unique())
-    return [{"label": p, "value": p} for p in players]
+def _is_url(s: str) -> bool:
+    return s.startswith("http://") or s.startswith("https://")
 
-def stats_stat_options():
-    return [{"label": k, "value": v} for k, v in available_stats.items()]
+
+def _fetch_bytes(url: str) -> bytes:
+    """
+    Fetch bytes from a URL. Adds Authorization header if GITHUB_TOKEN is set.
+    Works for public URLs and for private GitHub raw URLs when token is required.
+    """
+    headers = {"User-Agent": "render-dash-app"}
+    if GITHUB_TOKEN:
+        # For GitHub, PAT usually works with "token <PAT>"
+        headers["Authorization"] = f"token {GITHUB_TOKEN}"
+
+    resp = requests.get(url, headers=headers, timeout=60)
+    resp.raise_for_status()
+    return resp.content
+
+
+@lru_cache(maxsize=1)
+def get_df_stats():
+    """
+    Lazy-load + cache NFL stats. Runs only when a callback calls it.
+    Supports local path OR URL.
+    """
+    print(f"[NFL] cwd={os.getcwd()}", flush=True)
+    print(f"[NFL] Loading stats from: {STATS_FILE}", flush=True)
+
+    if _is_url(STATS_FILE):
+        data = _fetch_bytes(STATS_FILE)
+        df = pd.read_parquet(BytesIO(data))
+    else:
+        df = pd.read_parquet(STATS_FILE)
+
+    df.columns = (
+        df.columns
+        .str.strip()
+        .str.lower()
+        .str.replace(" ", "_")
+    )
+
+    print(f"[NFL] Loaded rows={len(df):,} cols={len(df.columns)}", flush=True)
+    return df
+
+
+def invalidate_cache():
+    get_df_stats.cache_clear()
+
+
+def stats_stat_options(df_cols=None):
+    # Build from BASE_STATS but only include stats that exist in the file
+    if df_cols is None:
+        return [{"label": s, "value": s} for s in BASE_STATS]
+
+    available = [s for s in BASE_STATS if s in set(df_cols)]
+    return [{"label": s, "value": s} for s in available]
+
 
 # -------------------------------------------------
 # PAGE LAYOUT
@@ -59,7 +111,7 @@ layout = html.Div([
         html.Label("Player"),
         dcc.Dropdown(
             id="nfl-stats-player-dropdown",
-            options=stats_player_options(),
+            options=[],  # ✅ populated via callback
             placeholder="Select a player",
             persistence=True,
             persistence_type="session",
@@ -69,7 +121,7 @@ layout = html.Div([
         html.Label("Statistic"),
         dcc.Dropdown(
             id="nfl-stats-stat-dropdown",
-            options=stats_stat_options(),
+            options=[],  # ✅ populated via callback (based on actual columns)
             placeholder="Select a statistic",
             persistence=True,
             persistence_type="session",
@@ -78,7 +130,6 @@ layout = html.Div([
 
         html.Label("Threshold (set using the slider)"),
 
-        # Display-only threshold box
         html.Div(
             id="nfl-threshold-display",
             style={
@@ -108,6 +159,18 @@ layout = html.Div([
             id="nfl-stats-range-note",
             style={"marginTop": "8px", "fontSize": "12px", "color": "#666"},
         ),
+
+        # ✅ Show load status or errors without crashing app
+        html.Div(
+            id="nfl-data-load-status",
+            style={"marginTop": "12px", "color": "#b00020", "fontSize": "12px"},
+        ),
+
+        # hidden trigger to init dropdowns after render
+        dcc.Interval(id="nfl-init", interval=500, n_intervals=0, max_intervals=1),
+
+        # optional: a reload button if you want to bust cache without redeploy
+        html.Button("Reload data", id="nfl-reload-btn", n_clicks=0, style={"marginTop": "10px"}),
     ],
     style={
         "width": "22%",
@@ -141,3 +204,36 @@ layout = html.Div([
     ],
     style={"marginLeft": "24%", "padding": "20px"}),
 ])
+
+# -------------------------------------------------
+# Callbacks: populate dropdowns (lazy load)
+# -------------------------------------------------
+@callback(
+    Output("nfl-stats-player-dropdown", "options"),
+    Output("nfl-stats-stat-dropdown", "options"),
+    Output("nfl-data-load-status", "children"),
+    Input("nfl-init", "n_intervals"),
+    Input("nfl-reload-btn", "n_clicks"),
+)
+def populate_dropdowns(_init_ticks, reload_clicks):
+    if reload_clicks and reload_clicks > 0:
+        invalidate_cache()
+
+    try:
+        df = get_df_stats()
+
+        # players
+        if player_col not in df.columns:
+            return [], [], f"Error: player column '{player_col}' not found in file."
+
+        players = sorted(df[player_col].dropna().unique())
+        player_opts = [{"label": p, "value": p} for p in players]
+
+        # stats
+        stat_opts = stats_stat_options(df.columns)
+
+        return player_opts, stat_opts, f"Loaded {len(df):,} rows from {STATS_FILE}"
+
+    except Exception as e:
+        print(f"[NFL] ERROR loading data: {type(e).__name__}: {e}", flush=True)
+        return [], [], f"Error loading NFL data: {type(e).__name__}: {e}"
