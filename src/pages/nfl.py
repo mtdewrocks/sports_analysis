@@ -22,7 +22,7 @@ register_page(
 # -------------------------------------------------
 
 BASE_DIR = Path(__file__).resolve().parents[2]  # .../src
-DEFAULT_STATS_FILE = BASE_DIR / "data" / "Player_Stats_Weekly.parquet"
+DEFAULT_STATS_FILE = BASE_DIR / "data" / "Player_Stats_Weekly.xlsx"
 
 # Allow override (Render env var). This can be a local path OR a URL.
 STATS_FILE = os.getenv("NFL_STATS_FILE", str(DEFAULT_STATS_FILE))
@@ -70,10 +70,10 @@ def get_df_stats():
     print(f"[NFL] Loading stats from: {STATS_FILE}", flush=True)
 
     if _is_url(STATS_FILE):
-        data = _fetch_bytes(STATS_FILE)
-        df = pd.read_parquet(BytesIO(data))
+        #data = _fetch_bytes(STATS_FILE)
+        df = pd.read_excel(STATS_FILE)
     else:
-        df = pd.read_parquet(STATS_FILE)
+        df = pd.read_excel(STATS_FILE)
 
     df.columns = (
         df.columns
