@@ -20,13 +20,15 @@ dash.register_page(
 # -------------------------------------------------
 # CONFIG: local defaults + URL override
 # -------------------------------------------------
-BASE_DIR = Path(__file__).resolve().parents[2]  # .../src
 
-DEFAULT_TEAM_STATS = BASE_DIR / "data" / "2025_Team_Stats.xlsx"
-DEFAULT_SCHEDULE = BASE_DIR / "data" / "schedule.xlsx"
+# Go up to project root (above src)
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
-TEAM_STATS_FILE = os.getenv("NFL_TEAM_STATS_FILE", str(DEFAULT_TEAM_STATS))  # path or URL
-SCHEDULE_FILE = os.getenv("NFL_SCHEDULE_FILE", str(DEFAULT_SCHEDULE))        # path or URL
+DEFAULT_TEAM_STATS = PROJECT_ROOT / "data" / "2025_Team_Stats.xlsx"
+DEFAULT_SCHEDULE   = PROJECT_ROOT / "data" / "schedule.xlsx"
+
+TEAM_STATS_FILE = os.getenv("NFL_TEAM_STATS_FILE", str(DEFAULT_TEAM_STATS))
+SCHEDULE_FILE   = os.getenv("NFL_SCHEDULE_FILE", str(DEFAULT_SCHEDULE))
 
 # Optional token for private GitHub (or other protected endpoints)
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN", "")
