@@ -11,7 +11,7 @@ def Navbar():
             # -------------------------
             html.A(
                 "Home",
-                href="http://localhost:5000/",       # 🔑 THIS FIXES THE ERROR
+                href="https://sports-prop-research.onrender.com/",       # 🔑 THIS FIXES THE ERROR
                 className="nav-item"
             ),
 
@@ -26,13 +26,13 @@ def Navbar():
                         className="dropdown-menu",
                         children=[
                             dcc.Link(
-                                "Game Log",
-                                href="/dash/nfl-game-logs",
+                                "Game Matchup",
+                                href="/dash/nfl-matchups",
                                 className="dropdown-link"
                             ),
                             dcc.Link(
-                                "Game matchup",
-                                href="/dash/nfl-matchups",
+                                "Game Log",
+                                href="/dash/nfl-game-logs",
                                 className="dropdown-link"
                             ),
                             dcc.Link(
@@ -56,7 +56,7 @@ def Navbar():
                         className="dropdown-menu",
                         children=[
                             dcc.Link(
-                                "Game Log",
+                                "Game Logs",
                                 href="/dash/nba",
                                 className="dropdown-link"
                             ),
