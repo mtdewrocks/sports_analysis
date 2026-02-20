@@ -20,7 +20,7 @@ dash.register_page(
 # -------------------------------------------------
 # CONFIG: local defaults + URL override
 # -------------------------------------------------
-BASE_DIR = Path(__file__).resolve().parents[1]  # .../src
+BASE_DIR = Path(__file__).resolve().parents[2]  # .../src
 
 DEFAULT_TEAM_STATS = BASE_DIR / "data" / "2025_Team_Stats.xlsx"
 DEFAULT_SCHEDULE = BASE_DIR / "data" / "schedule.xlsx"

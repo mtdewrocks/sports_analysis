@@ -21,7 +21,7 @@ register_page(
 # Data config (DO NOT LOAD AT IMPORT TIME)
 # -------------------------------------------------
 
-BASE_DIR = Path(__file__).resolve().parents[1]  # .../src
+BASE_DIR = Path(__file__).resolve().parents[2]  # .../src
 DEFAULT_STATS_FILE = BASE_DIR / "data" / "Player_Stats_Weekly.parquet"
 
 # Allow override (Render env var). This can be a local path OR a URL.
