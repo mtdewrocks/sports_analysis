@@ -1,6 +1,6 @@
 import pandas as pd
-import dash_table
-from dash import Input, Output, callback, html
+
+from dash import Input, Output, callback, html, dash_table
 
 # Import dataframe AND helper functions from the page module
 from pages.nba_props_lines import (
