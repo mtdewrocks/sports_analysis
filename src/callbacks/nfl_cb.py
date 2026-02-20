@@ -2,11 +2,12 @@ import pandas as pd
 import plotly.graph_objects as go
 from dash import Input, Output, callback, html, no_update
 
+# ✅ Load from shared cached data store (safe at import time)
+from data_store import get_nfl_df, NFL_PLAYER_COL, NFL_DATE_COL, NFL_LOCATION_COL
 
-# -------------------------------------------------
-# Import data directly from the NFL page
-# -------------------------------------------------
-from pages.nfl import df_stats, player_col, date_col, location_col
+player_col = NFL_PLAYER_COL
+date_col = NFL_DATE_COL
+location_col = NFL_LOCATION_COL  # kept for compatibility if you later use it
 
 
 # -------------------------------------------------
@@ -24,7 +25,7 @@ def clean_numeric(series):
 
 def over_counts(df, stat_col, threshold):
     if df.empty:
-        s = pd.Series([])
+        s = pd.Series([], dtype="float64")
     else:
         s = clean_numeric(df[stat_col])
 
@@ -94,12 +95,19 @@ def build_table(all_counts):
     Input("nfl-stats-stat-dropdown", "value"),
 )
 def nfl_update_slider_props(player, stat_col):
-    print("NFL SLIDER CALLBACK — Player:", player, "Stat:", stat_col)
+    print("NFL SLIDER CALLBACK — Player:", player, "Stat:", stat_col, flush=True)
 
     if not player or not stat_col:
         return 0, 25, {}, 10, "Select a player and stat to begin."
 
+    df_stats = get_nfl_df()
+
+    if player_col not in df_stats.columns:
+        return 0, 25, {}, 10, f"Error: player column '{player_col}' not found in NFL data."
+
     sub = df_stats[df_stats[player_col] == player]
+    if sub.empty:
+        return 0, 25, {}, 10, "No games found for this player."
 
     if stat_col not in sub.columns:
         return 0, 25, {}, 10, "Selected stat not found in data."
@@ -126,7 +134,7 @@ def nfl_update_slider_props(player, stat_col):
     Input("nfl-stats-threshold-slider", "value")
 )
 def nfl_show_threshold(slider_value):
-    print("NFL THRESHOLD DISPLAY — Slider value:", slider_value)
+    print("NFL THRESHOLD DISPLAY — Slider value:", slider_value, flush=True)
     return f"{slider_value}"
 
 
@@ -143,50 +151,55 @@ def nfl_show_threshold(slider_value):
     Input("nfl-stats-threshold-slider", "value"),
 )
 def nfl_update_chart_and_counts(player, stat_col, threshold):
-    print("NFL CHART CALLBACK — Player:", player, "Stat:", stat_col, "Threshold:", threshold)
+    print("NFL CHART CALLBACK — Player:", player, "Stat:", stat_col, "Threshold:", threshold, flush=True)
 
     if not stat_col:
         return empty_fig("Please select a statistic.")
 
+    # Preserve your behavior: if no player, don't update anything
+    if not player:
+        return no_update, no_update, no_update, no_update
+
+    df_stats = get_nfl_df()
     if df_stats is None or df_stats.empty:
         return empty_fig("Data file is missing or empty.")
 
-    sub = df_stats.copy()
-    if not player:
-        return no_update
-    else:
-        sub = sub[sub[player_col] == player]
+    if player_col not in df_stats.columns:
+        return empty_fig(f"Missing column '{player_col}' in NFL data.")
 
+    sub = df_stats[df_stats[player_col] == player].copy()
     if sub.empty:
         return empty_fig("No games found for this player.")
 
-    sub[stat_col] = clean_numeric(sub[stat_col])
-    sub = sub.dropna(subset=[stat_col])
+    if stat_col not in sub.columns:
+        return empty_fig("Selected stat not found in data.")
 
+    sub[stat_col] = pd.to_numeric(sub[stat_col], errors="coerce")
+    sub = sub.dropna(subset=[stat_col])
     if sub.empty:
         return empty_fig("Selected stat has no numeric values.")
 
-    sub = sub.sort_values(date_col)
+    if date_col in sub.columns:
+        sub = sub.sort_values(date_col)
 
     threshold_val = float(threshold or 0)
-    player_label = player or "All Players"
+    player_label = player
 
-    x_vals = sub[date_col].astype(str).tolist()
+    x_vals = sub[date_col].astype(str).tolist() if date_col in sub.columns else list(range(len(sub)))
     y_vals = sub[stat_col].astype(float).tolist()
 
     colors = ["#1f77b4" if v >= threshold_val else "#d62728" for v in y_vals]
 
     # ---------- Chart ----------
     fig = go.Figure()
-
     fig.add_bar(
         x=x_vals,
         y=y_vals,
         marker_color=colors,
         hovertemplate=(
             f"{player_col}: {player_label}<br>"
-            f"{date_col}: %{{x}}<br>"
-            f"{stat_col.upper()}: %{{y}}<extra></extra>"
+            + (f"{date_col}: %{{x}}<br>" if date_col in sub.columns else "")
+            + f"{stat_col.upper()}: %{{y}}<extra></extra>"
         ),
     )
 
