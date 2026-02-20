@@ -22,7 +22,7 @@ register_page(
 # -------------------------------------------------
 
 BASE_DIR = Path(__file__).resolve().parents[2]  # .../src
-DEFAULT_STATS_FILE = BASE_DIR / "data" / "Player_Stats_Weekly.xlsx"
+DEFAULT_STATS_FILE = BASE_DIR / "data" / "Player_Stats_Weekly.parquet"
 
 # Allow override (Render env var). This can be a local path OR a URL.
 STATS_FILE = os.getenv("NFL_STATS_FILE", str(DEFAULT_STATS_FILE))
@@ -71,9 +71,9 @@ def get_df_stats():
 
     if _is_url(STATS_FILE):
         #data = _fetch_bytes(STATS_FILE)
-        df = pd.read_excel(STATS_FILE)
+        df = pd.read_parquet(STATS_FILE)
     else:
-        df = pd.read_excel(STATS_FILE)
+        df = pd.read_parquet(STATS_FILE)
 
     df.columns = (
         df.columns
@@ -169,8 +169,6 @@ layout = html.Div([
         # hidden trigger to init dropdowns after render
         dcc.Interval(id="nfl-init", interval=500, n_intervals=0, max_intervals=1),
 
-        # optional: a reload button if you want to bust cache without redeploy
-        html.Button("Reload data", id="nfl-reload-btn", n_clicks=0, style={"marginTop": "10px"}),
     ],
     style={
         "width": "22%",
@@ -232,7 +230,7 @@ def populate_dropdowns(_init_ticks, reload_clicks):
         # stats
         stat_opts = stats_stat_options(df.columns)
 
-        return player_opts, stat_opts, f"Loaded {len(df):,} rows from {STATS_FILE}"
+        return player_opts, stat_opts
 
     except Exception as e:
         print(f"[NFL] ERROR loading data: {type(e).__name__}: {e}", flush=True)
