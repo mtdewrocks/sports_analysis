@@ -2,10 +2,13 @@ import pandas as pd
 import plotly.graph_objects as go
 from dash import Input, Output, callback, html
 
-# -------------------------------------------------
-# Import data from NBA page
-# -------------------------------------------------
-from pages.nba import df_stats, player_col, date_col, location_col
+# ✅ Import cached loader + constants (safe at import time)
+from data_store import get_nba_df, NBA_PLAYER_COL, NBA_DATE_COL, NBA_LOCATION_COL
+
+# Keep names consistent with your existing code
+player_col = NBA_PLAYER_COL
+date_col = NBA_DATE_COL
+location_col = NBA_LOCATION_COL
 
 
 # -------------------------------------------------
@@ -23,7 +26,7 @@ def clean_numeric(series):
 
 def over_counts(df, stat_col, threshold):
     if df.empty:
-        s = pd.Series([])
+        s = pd.Series([], dtype="float64")
     else:
         s = clean_numeric(df[stat_col])
 
@@ -102,10 +105,13 @@ def build_table(all_counts, home_counts, away_counts):
     Input("nba-stats-stat-dropdown", "value"),
 )
 def stats_update_slider_props(player, stat_col):
-    print("SLIDER CALLBACK — Player:", player, "Stat:", stat_col)
+    print("SLIDER CALLBACK — Player:", player, "Stat:", stat_col, flush=True)
 
     if not player or not stat_col:
         return 0, 25, {}, 10, "Select a player and stat to begin."
+
+    # ✅ Load cached df inside callback
+    df_stats = get_nba_df()
 
     sub = df_stats[df_stats[player_col] == player]
 
@@ -134,7 +140,7 @@ def stats_update_slider_props(player, stat_col):
     Input("nba-stats-threshold-slider", "value")
 )
 def show_threshold(slider_value):
-    print("THRESHOLD DISPLAY — Slider value:", slider_value)
+    print("THRESHOLD DISPLAY — Slider value:", slider_value, flush=True)
     return f"{slider_value}"
 
 
@@ -151,11 +157,13 @@ def show_threshold(slider_value):
     Input("nba-stats-threshold-slider", "value"),
 )
 def stats_update_chart_and_counts(player, stat_col, threshold):
-    print("CHART CALLBACK — Player:", player, "Stat:", stat_col, "Threshold:", threshold)
+    print("CHART CALLBACK — Player:", player, "Stat:", stat_col, "Threshold:", threshold, flush=True)
 
     if not stat_col:
         return empty_fig("Please select a statistic.")
 
+    # ✅ Load cached df inside callback
+    df_stats = get_nba_df()
     if df_stats is None or df_stats.empty:
         return empty_fig("Data file is missing or empty.")
 
@@ -166,7 +174,7 @@ def stats_update_chart_and_counts(player, stat_col, threshold):
     if sub.empty:
         return empty_fig("No games found for this player.")
 
-    sub[stat_col] = clean_numeric(sub[stat_col])
+    sub[stat_col] = pd.to_numeric(sub[stat_col], errors="coerce")
     sub = sub.dropna(subset=[stat_col])
 
     if sub.empty:
@@ -183,7 +191,6 @@ def stats_update_chart_and_counts(player, stat_col, threshold):
     colors = ["#1f77b4" if v >= threshold_val else "#d62728" for v in y_vals]
 
     fig = go.Figure()
-
     fig.add_bar(
         x=x_vals,
         y=y_vals,
@@ -237,8 +244,8 @@ def stats_update_chart_and_counts(player, stat_col, threshold):
     ])
 
     if location_col in sub.columns:
-        home_games = sub[sub[location_col].str.lower() == "home"]
-        away_games = sub[sub[location_col].str.lower() == "away"]
+        home_games = sub[sub[location_col].astype(str).str.lower() == "home"]
+        away_games = sub[sub[location_col].astype(str).str.lower() == "away"]
     else:
         home_games = pd.DataFrame()
         away_games = pd.DataFrame()

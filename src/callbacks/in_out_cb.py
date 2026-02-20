@@ -1,4 +1,15 @@
-@app.callback(
+from dash import Input, Output, callback, html, dcc, callback_context
+from dash.dependencies import ALL
+import pandas as pd
+import plotly.express as px
+
+from data_store import get_nba_impact_df, get_nba_impact_stat_cols
+
+
+# -------------------------------------------------
+# Update teammate exclusion dropdown
+# -------------------------------------------------
+@callback(
     Output("impact-exclude-players", "options"),
     Output("impact-exclude-players", "value"),
     Input("impact-player-a", "value")
@@ -7,25 +18,33 @@ def update_exclude_dropdown(player_a):
     if not player_a:
         return [], []
 
+    df_impact = get_nba_impact_df()
+
     team_series = df_impact.loc[df_impact["player"] == player_a, "team"]
     if team_series.empty:
         return [], []
 
     team = team_series.mode()[0]
 
-    teammates = sorted(df_impact[df_impact["team"] == team]["player"].unique())
+    teammates = sorted(df_impact[df_impact["team"] == team]["player"].dropna().unique())
     teammates = [p for p in teammates if p != player_a]
 
     return [{"label": p, "value": p} for p in teammates], []
 
 
-@app.callback(
+# -------------------------------------------------
+# Build stat buttons dynamically
+# -------------------------------------------------
+@callback(
     Output("impact-stat-buttons", "children"),
     Input("impact-player-a", "value")
 )
 def build_stat_buttons(player_a):
     if not player_a:
         return html.Div("Select Player A above.")
+
+    df_impact = get_nba_impact_df()
+    impact_stat_cols = get_nba_impact_stat_cols(df_impact)
 
     buttons = []
     for stat in impact_stat_cols:
@@ -49,13 +68,16 @@ def build_stat_buttons(player_a):
     return html.Div(buttons)
 
 
-@app.callback(
+# -------------------------------------------------
+# Update impact chart
+# -------------------------------------------------
+@callback(
     Output("impact-chart-container", "children"),
     Input({"type": "impact-stat-button", "index": ALL}, "n_clicks"),
     Input("impact-player-a", "value"),
     Input("impact-exclude-players", "value")
 )
-def update_impact_chart(n_clicks_list, player_a, exclude_players):
+def update_impact_chart(_n_clicks_list, player_a, exclude_players):
     ctx = callback_context
     if not ctx.triggered:
         return html.Div("Select a stat above.")
@@ -70,12 +92,19 @@ def update_impact_chart(n_clicks_list, player_a, exclude_players):
     if not player_a:
         return html.Div("Select Player A above.")
 
+    df_impact = get_nba_impact_df()
+
+    required_cols = {"player", "team", "game_date", "played"}
+    missing = required_cols - set(df_impact.columns)
+    if missing:
+        return html.Div(f"Impact dataset missing columns: {', '.join(sorted(missing))}")
+
     team_series = df_impact.loc[df_impact["player"] == player_a, "team"]
     if team_series.empty:
         return html.Div(f"No team found for {player_a}.")
     team = team_series.mode()[0]
 
-    team_games = df_impact[df_impact["team"] == team]["game_date"].unique()
+    team_games = df_impact[df_impact["team"] == team]["game_date"].dropna().unique()
     team_rows = df_impact[df_impact["team"] == team][["player", "game_date", "played"]].copy()
 
     excluded = exclude_players[:2] if exclude_players else []
@@ -114,6 +143,9 @@ def update_impact_chart(n_clicks_list, player_a, exclude_players):
     if df_team.empty:
         return html.Div("No teammate data available after filtering games.")
 
+    if stat_clicked not in df_team.columns:
+        return html.Div(f"Stat '{stat_clicked}' not found in dataset.")
+
     df_team[stat_clicked] = pd.to_numeric(df_team[stat_clicked], errors="coerce")
     df_team = df_team.dropna(subset=[stat_clicked])
 
@@ -139,7 +171,6 @@ def update_impact_chart(n_clicks_list, player_a, exclude_players):
         return html.Div("Insufficient With/Without data to compute differences.")
 
     df_pivot = df_pivot.dropna(subset=["With", "Without"])
-
     if df_pivot.empty:
         return html.Div("No players have both With and Without data.")
 
@@ -174,7 +205,6 @@ def update_impact_chart(n_clicks_list, player_a, exclude_players):
     )
 
     fig.update_traces(hovertemplate=hovertemplate)
-
     fig.update_layout(
         height=500,
         margin=dict(l=20, r=20, t=40, b=20),
