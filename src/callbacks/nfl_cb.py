@@ -99,7 +99,6 @@ def build_table(all_counts: dict):
 @callback(
     Output("nfl-stats-player-dropdown", "options"),
     Output("nfl-stats-stat-dropdown", "options"),
-    Output("nfl-data-load-status", "children"),
     Input("nfl-init", "n_intervals"),
 )
 def nfl_init_dropdowns(_):
@@ -117,7 +116,7 @@ def nfl_init_dropdowns(_):
         available_stats = [s for s in BASE_STATS if s in df.columns]
         stat_opts = [{"label": s, "value": s} for s in available_stats]
 
-        return player_opts, stat_opts, f"Loaded {len(df):,} rows / {len(df.columns)} cols."
+        return player_opts, stat_opts
 
     except Exception as e:
         return [], [], f"Error loading NFL data: {type(e).__name__}: {e}"

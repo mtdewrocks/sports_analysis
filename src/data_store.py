@@ -62,7 +62,7 @@ def clear_nba_cache():
 # -----------------------------
 NBA_IMPACT_FILE = os.getenv(
     "NBA_IMPACT_FILE",
-    "https://raw.githubusercontent.com/mtdewrocks/sports_analysis/main/data/nba_absence_impact.parquet",
+    "https://raw.githubusercontent.com/mtdewrocks/sports_analysis/main/data/NBA_Player_Stats.parquet",
 )
 
 
@@ -70,6 +70,7 @@ NBA_IMPACT_FILE = os.getenv(
 def get_nba_impact_df() -> pd.DataFrame:
     print(f"[data_store] Loading NBA impact from: {NBA_IMPACT_FILE}", flush=True)
     df = _read_parquet_anywhere(NBA_IMPACT_FILE)
+    df = df.drop(columns=["FGM","FG%","3P%","FTM","FTA","FT%","OREB","DREB","PF","+/-","FP","DBLDBL","TRPLDBL","SEASON"])
     return _normalize_cols(df)
 
 
