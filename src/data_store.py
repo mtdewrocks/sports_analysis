@@ -2,6 +2,7 @@
 import os
 from functools import lru_cache
 from io import BytesIO
+from pathlib import Path
 
 import pandas as pd
 import requests
@@ -127,9 +128,14 @@ def get_nba_impact_stat_cols(df_impact: pd.DataFrame) -> list[str]:
 # -----------------------------
 # NFL: Game logs dataset (parquet)
 # -----------------------------
+# Project root (this file is at project/src/data_store.py)
+PROJECT_ROOT = Path(__file__).resolve().parents[1]  # project/
+DEFAULT_NFL_STATS_FILE = PROJECT_ROOT / "data" / "Player_Stats_Weekly.parquet"
+
+# ✅ Allow override via env var, but default to local repo file
 NFL_STATS_FILE = os.getenv(
     "NFL_STATS_FILE",
-    "",  # set in Render env var or keep empty if not used
+    str(DEFAULT_NFL_STATS_FILE),
 )
 
 NFL_PLAYER_COL = os.getenv("NFL_PLAYER_COL", "player_display_name")
@@ -139,8 +145,6 @@ NFL_LOCATION_COL = os.getenv("NFL_LOCATION_COL", "location")
 
 @lru_cache(maxsize=1)
 def get_nfl_df() -> pd.DataFrame:
-    if not NFL_STATS_FILE:
-        raise RuntimeError("NFL_STATS_FILE is not set. Set it to a local path or public URL.")
     print(f"[data_store] Loading NFL stats from: {NFL_STATS_FILE}", flush=True)
     df = _read_parquet_anywhere(NFL_STATS_FILE)
     return _normalize_cols(df)
