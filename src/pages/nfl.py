@@ -211,12 +211,8 @@ layout = html.Div([
     Output("nfl-stats-stat-dropdown", "options"),
     Output("nfl-data-load-status", "children"),
     Input("nfl-init", "n_intervals"),
-    Input("nfl-reload-btn", "n_clicks"),
 )
-def populate_dropdowns(_init_ticks, reload_clicks):
-    if reload_clicks and reload_clicks > 0:
-        invalidate_cache()
-
+def populate_dropdowns(_init_ticks):
     try:
         df = get_df_stats()
 
@@ -227,10 +223,11 @@ def populate_dropdowns(_init_ticks, reload_clicks):
         players = sorted(df[player_col].dropna().unique())
         player_opts = [{"label": p, "value": p} for p in players]
 
-        # stats
+        # stats (only those that exist)
         stat_opts = stats_stat_options(df.columns)
 
-        return player_opts, stat_opts
+        # ✅ must return 3 outputs
+        return player_opts, stat_opts, f"Loaded {len(df):,} rows / {len(df.columns)} cols."
 
     except Exception as e:
         print(f"[NFL] ERROR loading data: {type(e).__name__}: {e}", flush=True)
