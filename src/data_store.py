@@ -33,6 +33,65 @@ def _normalize_cols(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
+# -----------------------------
+# NBA: Player game logs dataset
+# -----------------------------
+NBA_STATS_FILE = os.getenv(
+    "NBA_STATS_FILE",
+    "https://raw.githubusercontent.com/mtdewrocks/sports_analysis/main/data/NBA_Player_Stats.parquet",
+)
+
+NBA_PLAYER_COL = "player"
+NBA_DATE_COL = "game_date"
+NBA_LOCATION_COL = "location"
+
+
+@lru_cache(maxsize=1)
+def get_nba_df() -> pd.DataFrame:
+    print(f"[data_store] Loading NBA stats from: {NBA_STATS_FILE}", flush=True)
+    df = _read_parquet_anywhere(NBA_STATS_FILE)
+    return _normalize_cols(df)
+
+
+def clear_nba_cache():
+    get_nba_df.cache_clear()
+
+
+# -----------------------------
+# NBA: Absence / Impact dataset
+# -----------------------------
+NBA_IMPACT_FILE = os.getenv(
+    "NBA_IMPACT_FILE",
+    "https://raw.githubusercontent.com/mtdewrocks/sports_analysis/main/data/nba_absence_impact.parquet",
+)
+
+
+@lru_cache(maxsize=1)
+def get_nba_impact_df() -> pd.DataFrame:
+    print(f"[data_store] Loading NBA impact from: {NBA_IMPACT_FILE}", flush=True)
+    df = _read_parquet_anywhere(NBA_IMPACT_FILE)
+    return _normalize_cols(df)
+
+
+def clear_nba_impact_cache():
+    get_nba_impact_df.cache_clear()
+
+
+def get_nba_impact_stat_cols(df_impact: pd.DataFrame) -> list[str]:
+    """
+    Builds list of stat columns dynamically for impact charts.
+    """
+    exclude = {"player", "team", "game_date", "played", "withorwithout"}
+    cols = [c for c in df_impact.columns if c not in exclude]
+
+    numeric_cols = []
+    for c in cols:
+        s = pd.to_numeric(df_impact[c], errors="coerce")
+        if s.notna().any():
+            numeric_cols.append(c)
+    return numeric_cols
+
+
 # ---------------------------------------------------------
 # NFL FILE — ALWAYS LOAD FROM RAW GITHUB URL BY DEFAULT
 # ---------------------------------------------------------
