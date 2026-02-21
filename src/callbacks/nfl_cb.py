@@ -1,6 +1,6 @@
 import pandas as pd
 import plotly.graph_objects as go
-from dash import Input, Output, callback, html, no_update
+from dash import Input, Output, callback, html
 
 # ✅ Load from shared cached data store (safe at import time)
 from data_store import get_nfl_df, NFL_PLAYER_COL, NFL_DATE_COL, NFL_LOCATION_COL
@@ -9,22 +9,33 @@ player_col = NFL_PLAYER_COL
 date_col = NFL_DATE_COL
 location_col = NFL_LOCATION_COL  # kept for compatibility if you later use it
 
+# Keep in sync with your dropdown / file columns
+BASE_STATS = [
+    "completions", "attempts", "passing_yards", "passing_tds", "passing_interceptions",
+    "carries", "rushing_yards", "rushing_tds",
+    "receptions", "receiving_yards",
+]
+
 
 # -------------------------------------------------
 # Helpers
 # -------------------------------------------------
-def empty_fig(message):
+def empty_fig(message: str):
+    """
+    Returns 4 outputs matching:
+      (figure, summary_children, table_children, footnote_children)
+    """
     fig = go.Figure()
-    fig.update_layout(title=message)
-    return fig, "", "", ""
+    fig.update_layout(title=message, template="simple_white")
+    return fig, html.Div(), html.Div(), ""
 
 
-def clean_numeric(series):
+def clean_numeric(series: pd.Series) -> pd.Series:
     return pd.to_numeric(series, errors="coerce").dropna()
 
 
-def over_counts(df, stat_col, threshold):
-    if df.empty:
+def over_counts(df: pd.DataFrame, stat_col: str, threshold: float) -> dict:
+    if df.empty or stat_col not in df.columns:
         s = pd.Series([], dtype="float64")
     else:
         s = clean_numeric(df[stat_col])
@@ -36,7 +47,7 @@ def over_counts(df, stat_col, threshold):
     }
 
 
-def build_table(all_counts):
+def build_table(all_counts: dict):
     header_style = {
         "padding": "12px 14px",
         "border": "1px solid #e6e9ee",
@@ -83,6 +94,36 @@ def build_table(all_counts):
 
 
 # -------------------------------------------------
+# INIT: Populate Player + Stat dropdowns (layout-only page needs this)
+# -------------------------------------------------
+@callback(
+    Output("nfl-stats-player-dropdown", "options"),
+    Output("nfl-stats-stat-dropdown", "options"),
+    Output("nfl-data-load-status", "children"),
+    Input("nfl-init", "n_intervals"),
+)
+def nfl_init_dropdowns(_):
+    try:
+        df = get_nfl_df()
+        if df is None or df.empty:
+            return [], [], "NFL data is empty or not loaded."
+
+        if player_col not in df.columns:
+            return [], [], f"Missing column '{player_col}' in NFL data."
+
+        players = sorted(df[player_col].dropna().unique())
+        player_opts = [{"label": p, "value": p} for p in players]
+
+        available_stats = [s for s in BASE_STATS if s in df.columns]
+        stat_opts = [{"label": s, "value": s} for s in available_stats]
+
+        return player_opts, stat_opts, f"Loaded {len(df):,} rows / {len(df.columns)} cols."
+
+    except Exception as e:
+        return [], [], f"Error loading NFL data: {type(e).__name__}: {e}"
+
+
+# -------------------------------------------------
 # Slider update callback
 # -------------------------------------------------
 @callback(
@@ -95,12 +136,12 @@ def build_table(all_counts):
     Input("nfl-stats-stat-dropdown", "value"),
 )
 def nfl_update_slider_props(player, stat_col):
-    print("NFL SLIDER CALLBACK — Player:", player, "Stat:", stat_col, flush=True)
-
     if not player or not stat_col:
         return 0, 25, {}, 10, "Select a player and stat to begin."
 
     df_stats = get_nfl_df()
+    if df_stats is None or df_stats.empty:
+        return 0, 25, {}, 10, "NFL data is empty."
 
     if player_col not in df_stats.columns:
         return 0, 25, {}, 10, f"Error: player column '{player_col}' not found in NFL data."
@@ -131,10 +172,9 @@ def nfl_update_slider_props(player, stat_col):
 # -------------------------------------------------
 @callback(
     Output("nfl-threshold-display", "children"),
-    Input("nfl-stats-threshold-slider", "value")
+    Input("nfl-stats-threshold-slider", "value"),
 )
 def nfl_show_threshold(slider_value):
-    print("NFL THRESHOLD DISPLAY — Slider value:", slider_value, flush=True)
     return f"{slider_value}"
 
 
@@ -151,14 +191,11 @@ def nfl_show_threshold(slider_value):
     Input("nfl-stats-threshold-slider", "value"),
 )
 def nfl_update_chart_and_counts(player, stat_col, threshold):
-    print("NFL CHART CALLBACK — Player:", player, "Stat:", stat_col, "Threshold:", threshold, flush=True)
-
     if not stat_col:
         return empty_fig("Please select a statistic.")
 
-    # Preserve your behavior: if no player, don't update anything
     if not player:
-        return no_update, no_update, no_update, no_update
+        return empty_fig("Please select a player.")
 
     df_stats = get_nfl_df()
     if df_stats is None or df_stats.empty:
