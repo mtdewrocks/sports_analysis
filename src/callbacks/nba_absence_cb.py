@@ -3,6 +3,7 @@ from dash.dependencies import ALL
 import pandas as pd
 
 from data_store import get_nba_impact_df, get_nba_impact_stat_cols
+import json
 
 
 # -------------------------------------------------
@@ -84,7 +85,7 @@ def update_impact_chart(n_clicks_list, player_a, exclude_players):
     trigger = ctx.triggered[0]["prop_id"].split(".")[0]
 
     try:
-        stat_clicked = eval(trigger)["index"]
+        stat_clicked = json.loads(trigger)["index"]
     except Exception:
         return html.Div("Select a stat above.")
 
