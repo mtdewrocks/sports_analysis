@@ -162,7 +162,7 @@ def stats_update_chart_and_counts(player, stat_col, threshold):
     if not stat_col:
         return empty_fig("Please select a statistic.")
 
-    # ✅ Load cached df inside callback
+    # Load cached df
     df_stats = get_nba_df()
     if df_stats is None or df_stats.empty:
         return empty_fig("Data file is missing or empty.")
@@ -174,22 +174,26 @@ def stats_update_chart_and_counts(player, stat_col, threshold):
     if sub.empty:
         return empty_fig("No games found for this player.")
 
+    # Ensure numeric stat
     sub[stat_col] = pd.to_numeric(sub[stat_col], errors="coerce")
     sub = sub.dropna(subset=[stat_col])
-
     if sub.empty:
         return empty_fig("Selected stat has no numeric values.")
 
+    # --- DATE HANDLING (data already datetime64) ---
+    # Just sort — do NOT convert to string
     sub = sub.sort_values(date_col)
 
     threshold_val = float(threshold or 0)
     player_label = player or "All Players"
 
-    x_vals = sub[date_col].astype(str).tolist()
+    # Use real datetime values directly
+    x_vals = sub[date_col]
     y_vals = sub[stat_col].astype(float).tolist()
 
     colors = ["#1f77b4" if v >= threshold_val else "#d62728" for v in y_vals]
 
+    # --- Chart ---
     fig = go.Figure()
     fig.add_bar(
         x=x_vals,
@@ -197,11 +201,12 @@ def stats_update_chart_and_counts(player, stat_col, threshold):
         marker_color=colors,
         hovertemplate=(
             f"{player_col}: {player_label}<br>"
-            f"{date_col}: %{{x}}<br>"
+            f"{date_col}: %{{x|%m/%d/%Y}}<br>"
             f"{stat_col.upper()}: %{{y}}<extra></extra>"
         ),
     )
 
+    # Threshold line
     fig.add_shape(
         type="line",
         x0=0, x1=1, xref="paper",
@@ -229,8 +234,12 @@ def stats_update_chart_and_counts(player, stat_col, threshold):
         template="simple_white",
         margin=dict(l=40, r=20, t=60, b=120),
         xaxis_tickangle=-45,
+        xaxis=dict(
+            tickformat="%m/%d/%Y"   # <-- hides time, keeps real date axis
+        ),
     )
 
+    # --- Summary ---
     total_games = len(y_vals)
     over_count = sum(v >= threshold_val for v in y_vals)
     under_count = total_games - over_count
@@ -243,6 +252,7 @@ def stats_update_chart_and_counts(player, stat_col, threshold):
         html.Div(f"Below threshold: {under_count}", style={"color": "#d62728"}),
     ])
 
+    # Home/Away splits
     if location_col in sub.columns:
         home_games = sub[sub[location_col].astype(str).str.lower() == "home"]
         away_games = sub[sub[location_col].astype(str).str.lower() == "away"]
