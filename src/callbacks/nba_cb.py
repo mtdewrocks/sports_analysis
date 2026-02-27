@@ -110,9 +110,7 @@ def stats_update_slider_props(player, stat_col):
     if not player or not stat_col:
         return 0, 25, {}, 10, "Select a player and stat to begin."
 
-    # ✅ Load cached df inside callback
     df_stats = get_nba_df()
-
     sub = df_stats[df_stats[player_col] == player]
 
     if stat_col not in sub.columns:
@@ -162,38 +160,39 @@ def stats_update_chart_and_counts(player, stat_col, threshold):
     if not stat_col:
         return empty_fig("Please select a statistic.")
 
-    # Load cached df
     df_stats = get_nba_df()
     if df_stats is None or df_stats.empty:
         return empty_fig("Data file is missing or empty.")
 
     sub = df_stats.copy()
+    if not player:
+        return empty_fig("Select a player to view game-by-game stats.")
+
     if player:
         sub = sub[sub[player_col] == player]
 
     if sub.empty:
         return empty_fig("No games found for this player.")
 
-    # Ensure numeric stat
     sub[stat_col] = pd.to_numeric(sub[stat_col], errors="coerce")
     sub = sub.dropna(subset=[stat_col])
     if sub.empty:
         return empty_fig("Selected stat has no numeric values.")
 
-    # --- DATE HANDLING (data already datetime64) ---
-    # Just sort — do NOT convert to string
+    # --- DATE HANDLING ---
     sub = sub.sort_values(date_col)
+
+    # Create clean string version for discrete axis
+    sub["date_str"] = sub[date_col].dt.strftime("%m/%d/%Y")
 
     threshold_val = float(threshold or 0)
     player_label = player or "All Players"
 
-    # Use real datetime values directly
-    x_vals = sub[date_col]
+    x_vals = sub["date_str"]
     y_vals = sub[stat_col].astype(float).tolist()
 
     colors = ["#1f77b4" if v >= threshold_val else "#d62728" for v in y_vals]
 
-    # --- Chart ---
     fig = go.Figure()
     fig.add_bar(
         x=x_vals,
@@ -201,12 +200,11 @@ def stats_update_chart_and_counts(player, stat_col, threshold):
         marker_color=colors,
         hovertemplate=(
             f"{player_col}: {player_label}<br>"
-            f"{date_col}: %{{x|%m/%d/%Y}}<br>"
+            f"{date_col}: %{{x}}<br>"
             f"{stat_col.upper()}: %{{y}}<extra></extra>"
         ),
     )
 
-    # Threshold line
     fig.add_shape(
         type="line",
         x0=0, x1=1, xref="paper",
@@ -227,6 +225,7 @@ def stats_update_chart_and_counts(player, stat_col, threshold):
         font=dict(size=11),
     )
 
+    # --- Discrete axis with correct chronological order ---
     fig.update_layout(
         title=f"{player_label} — {stat_col.upper()} by Game",
         xaxis_title="Game",
@@ -235,11 +234,12 @@ def stats_update_chart_and_counts(player, stat_col, threshold):
         margin=dict(l=40, r=20, t=60, b=120),
         xaxis_tickangle=-45,
         xaxis=dict(
-            tickformat="%m/%d/%Y"   # <-- hides time, keeps real date axis
+            type="category",
+            categoryorder="array",
+            categoryarray=sub["date_str"].tolist(),
         ),
     )
 
-    # --- Summary ---
     total_games = len(y_vals)
     over_count = sum(v >= threshold_val for v in y_vals)
     under_count = total_games - over_count
@@ -252,7 +252,6 @@ def stats_update_chart_and_counts(player, stat_col, threshold):
         html.Div(f"Below threshold: {under_count}", style={"color": "#d62728"}),
     ])
 
-    # Home/Away splits
     if location_col in sub.columns:
         home_games = sub[sub[location_col].astype(str).str.lower() == "home"]
         away_games = sub[sub[location_col].astype(str).str.lower() == "away"]
