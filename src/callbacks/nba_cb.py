@@ -92,6 +92,29 @@ def build_table(all_counts, home_counts, away_counts):
     )
 
 
+def apply_schedule_filters(sub: pd.DataFrame, b2b_toggle, three_in_four_toggle) -> pd.DataFrame:
+    """
+    b2b_toggle comes from id='nba-b2b-toggle' -> [] or ['b2b2']
+    three_in_four_toggle comes from id='nba-3in4-toggle' -> [] or ['3in4']
+    """
+    # Back-to-back filter
+    if b2b_toggle and "b2b2" in b2b_toggle:
+        if "back_to_back" in sub.columns:
+            sub = sub[sub["back_to_back"] == 1]
+        else:
+            # Column missing => return empty to make the UI show "no games"
+            return sub.iloc[0:0]
+
+    # 3rd game in 4 nights filter
+    if three_in_four_toggle and "3in4" in three_in_four_toggle:
+        if "third_in_four" in sub.columns:
+            sub = sub[sub["third_in_four"] == 1]
+        else:
+            return sub.iloc[0:0]
+
+    return sub
+
+
 # -------------------------------------------------
 # Slider update callback
 # -------------------------------------------------
@@ -103,15 +126,27 @@ def build_table(all_counts, home_counts, away_counts):
     Output("nba-stats-range-note", "children"),
     Input("nba-stats-player-dropdown", "value"),
     Input("nba-stats-stat-dropdown", "value"),
+    Input("nba-b2b-toggle", "value"),     # ✅ NEW
+    Input("nba-3in4-toggle", "value"),    # ✅ NEW
 )
-def stats_update_slider_props(player, stat_col):
-    print("SLIDER CALLBACK — Player:", player, "Stat:", stat_col, flush=True)
+def stats_update_slider_props(player, stat_col, b2b_toggle, three_in_four_toggle):
+    print("SLIDER CALLBACK — Player:", player, "Stat:", stat_col,
+          "B2B:", b2b_toggle, "3in4:", three_in_four_toggle, flush=True)
 
     if not player or not stat_col:
         return 0, 25, {}, 10, "Select a player and stat to begin."
 
     df_stats = get_nba_df()
+
+    # Filter to player first (smaller)
     sub = df_stats[df_stats[player_col] == player]
+
+    # Apply schedule filters
+    sub = apply_schedule_filters(sub, b2b_toggle, three_in_four_toggle)
+
+    if sub.empty:
+        msg = "No games found for this player with the selected schedule filter(s)."
+        return 0, 25, {}, 10, msg
 
     if stat_col not in sub.columns:
         return 0, 25, {}, 10, "Selected stat not found in data."
@@ -153,9 +188,12 @@ def show_threshold(slider_value):
     Input("nba-stats-player-dropdown", "value"),
     Input("nba-stats-stat-dropdown", "value"),
     Input("nba-stats-threshold-slider", "value"),
+    Input("nba-b2b-toggle", "value"),     # ✅ NEW
+    Input("nba-3in4-toggle", "value"),    # ✅ NEW
 )
-def stats_update_chart_and_counts(player, stat_col, threshold):
-    print("CHART CALLBACK — Player:", player, "Stat:", stat_col, "Threshold:", threshold, flush=True)
+def stats_update_chart_and_counts(player, stat_col, threshold, b2b_toggle, three_in_four_toggle):
+    print("CHART CALLBACK — Player:", player, "Stat:", stat_col, "Threshold:", threshold,
+          "B2B:", b2b_toggle, "3in4:", three_in_four_toggle, flush=True)
 
     if not stat_col:
         return empty_fig("Please select a statistic.")
@@ -164,29 +202,36 @@ def stats_update_chart_and_counts(player, stat_col, threshold):
     if df_stats is None or df_stats.empty:
         return empty_fig("Data file is missing or empty.")
 
-    sub = df_stats.copy()
     if not player:
         return empty_fig("Select a player to view game-by-game stats.")
 
-    if player:
-        sub = sub[sub[player_col] == player]
+    # Filter to player first
+    sub = df_stats[df_stats[player_col] == player].copy()
+
+    # Apply schedule filters
+    sub = apply_schedule_filters(sub, b2b_toggle, three_in_four_toggle)
 
     if sub.empty:
-        return empty_fig("No games found for this player.")
+        return empty_fig("No games found for this player with the selected schedule filter(s).")
 
+    # Ensure numeric stat
     sub[stat_col] = pd.to_numeric(sub[stat_col], errors="coerce")
     sub = sub.dropna(subset=[stat_col])
     if sub.empty:
         return empty_fig("Selected stat has no numeric values.")
 
+    # Ensure date column is datetime for sorting/formatting
+    sub[date_col] = pd.to_datetime(sub[date_col], errors="coerce")
+    sub = sub.dropna(subset=[date_col])
+    if sub.empty:
+        return empty_fig("No valid game dates after filtering.")
+
     # --- DATE HANDLING ---
     sub = sub.sort_values(date_col)
-
-    # Create clean string version for discrete axis
     sub["date_str"] = sub[date_col].dt.strftime("%m/%d/%Y")
 
     threshold_val = float(threshold or 0)
-    player_label = player or "All Players"
+    player_label = player
 
     x_vals = sub["date_str"]
     y_vals = sub[stat_col].astype(float).tolist()
@@ -225,7 +270,6 @@ def stats_update_chart_and_counts(player, stat_col, threshold):
         font=dict(size=11),
     )
 
-    # --- Discrete axis with correct chronological order ---
     fig.update_layout(
         title=f"{player_label} — {stat_col.upper()} by Game",
         xaxis_title="Game",
