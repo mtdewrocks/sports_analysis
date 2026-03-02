@@ -102,32 +102,6 @@ layout = html.Div([
         # -------------------------------------------------
         # ✅ NEW: stacked schedule filter toggles
         # -------------------------------------------------
-        html.Div(
-            [
-                html.Label("Schedule Filters", style={"marginTop": "10px"}),
-
-                dcc.Checklist(
-                    id="nba-b2b-toggle",
-                    options=[{"label": "2nd night of back-to-back only", "value": "b2b2"}],
-                    value=[],
-                    style={"marginBottom": "8px"},
-                    inputStyle={"marginRight": "8px"},
-                    persistence=True,
-                    persistence_type="session",
-                ),
-
-                dcc.Checklist(
-                    id="nba-3in4-toggle",
-                    options=[{"label": "3rd game in 4 nights only", "value": "3in4"}],
-                    value=[],
-                    style={"marginBottom": "12px"},
-                    inputStyle={"marginRight": "8px"},
-                    persistence=True,
-                    persistence_type="session",
-                ),
-            ],
-            style={"marginTop": "6px"},
-        ),
 
         html.Label("Threshold (set using the slider)"),
 
@@ -161,6 +135,32 @@ layout = html.Div([
         html.Div(
             id="nba-stats-range-note",
             style={"marginTop": "8px", "color": "#666", "fontSize": "12px"},
+        ),
+        html.Div(
+            [
+                html.Label("Schedule Filters", style={"marginTop": "10px"}),
+
+                dcc.Checklist(
+                    id="nba-b2b-toggle",
+                    options=[{"label": "2nd night of back-to-back only", "value": "b2b2"}],
+                    value=[],
+                    style={"marginBottom": "8px"},
+                    inputStyle={"marginRight": "8px"},
+                    persistence=True,
+                    persistence_type="session",
+                ),
+
+                dcc.Checklist(
+                    id="nba-3in4-toggle",
+                    options=[{"label": "3rd game in 4 nights only", "value": "3in4"}],
+                    value=[],
+                    style={"marginBottom": "12px"},
+                    inputStyle={"marginRight": "8px"},
+                    persistence=True,
+                    persistence_type="session",
+                ),
+            ],
+            style={"marginTop": "6px"},
         ),
 
         # ✅ Optional: show load errors on the page instead of crashing deploy
