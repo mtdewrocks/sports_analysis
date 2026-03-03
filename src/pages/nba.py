@@ -12,7 +12,7 @@ register_page(
     __name__,
     path="/nba",
     name="NBA Game Log",
-    title="NBA Game Log"
+    title="NBA Game Log",
 )
 
 # -------------------------------------------------
@@ -41,7 +41,7 @@ available_stats = {
 }
 
 # -------------------------------------------------
-# Helpers (import these from your callbacks file)
+# Helpers (import these from your callbacks file if desired)
 # -------------------------------------------------
 def stats_stat_options():
     return [{"label": k.upper(), "value": v} for k, v in available_stats.items()]
@@ -88,7 +88,7 @@ def _get_latest_team_for_player(df: pd.DataFrame, team_col: str, player: str) ->
 def team_teammates_options(df: pd.DataFrame, selected_player: str) -> list[dict]:
     """
     Returns teammate dropdown options limited to the selected player's (latest) team.
-    If no team column exists, falls back to all players.
+    If no team column exists, falls back to all players (excluding selected).
     """
     if not selected_player:
         return []
@@ -125,12 +125,12 @@ def apply_with_without_filters(
       - label_suffix: text describing filter applied (for chart title / footnote)
 
     WITH:
-      Keep dates where sum(played) across [main, with_player] == 2
-      Then keep only main_player rows for those dates.
+      Keep dates where sum(played) across [main, with_player] == 2,
+      then keep only main_player rows for those dates.
 
     WITHOUT:
-      Keep dates where main_player played (played==1) AND without_player did NOT play that date
-      (missing row OR played==0). In practice: exclude dates where without_player played==1.
+      Keep dates where main_player played (played==1) AND without_player did NOT play that date.
+      (missing row OR played==0). Practically: exclude dates where without_player played==1.
     """
     if not main_player:
         return df.iloc[0:0].copy(), ""
@@ -140,14 +140,12 @@ def apply_with_without_filters(
 
     df_main = df[df[player_col] == main_player].copy()
 
-    # sensible default: main player's games where played==1
     if not with_player and not without_player:
         df_main = df_main[df_main["played"] == 1]
         return df_main, ""
 
     suffix_parts = []
 
-    # ---- WITH logic ----
     if with_player:
         df_pair = df[df[player_col].isin([main_player, with_player])].copy()
         g = df_pair.groupby(date_col, dropna=False)["played"].sum()
@@ -156,7 +154,6 @@ def apply_with_without_filters(
         df_main = df_main[df_main[date_col].isin(with_dates)]
         suffix_parts.append(f"WITH: {with_player}")
 
-    # ---- WITHOUT logic ----
     if without_player:
         without_played_dates = set(
             df.loc[
@@ -178,17 +175,19 @@ def apply_schedule_filters(df_main: pd.DataFrame, b2b_values: list, in3in4_value
     """
     df_out = df_main.copy()
 
-    # B2B: "2nd night of back-to-back only"
     if "b2b2" in (b2b_values or []):
         b2b_col = _first_existing_col(df_out, ["back_to_back", "b2b", "b2b_2nd", "b2b2"])
         if b2b_col:
             df_out = df_out[df_out[b2b_col] == 1]
+        else:
+            return df_out.iloc[0:0]
 
-    # 3 in 4: "3rd game in 4 nights only"
     if "3in4" in (in3in4_values or []):
         in3in4_col = _first_existing_col(df_out, ["third_in_four", "third_in_4", "three_in_four", "3in4"])
         if in3in4_col:
             df_out = df_out[df_out[in3in4_col] == 1]
+        else:
+            return df_out.iloc[0:0]
 
     return df_out
 
@@ -223,7 +222,9 @@ def get_df_stats() -> pd.DataFrame:
 
 
 # -------------------------------------------------
-# PAGE LAYOUT (no callbacks here)
+# PAGE LAYOUT (UPDATED ORDER)
+# - WITH/WITHOUT dropdowns are AFTER slider and range note
+#   but BEFORE the schedule options block.
 # -------------------------------------------------
 layout = html.Div([
 
@@ -234,37 +235,11 @@ layout = html.Div([
         html.Label("Player"),
         dcc.Dropdown(
             id="nba-stats-player-dropdown",
-            options=[],  # filled by callback in your other file
+            options=[],  # populated by callback in callbacks file
             placeholder="Select a player",
             style={"marginBottom": "12px"},
             persistence=True,
             persistence_type="session",
-        ),
-
-        # NEW: With teammate
-        html.Label("WITH (same team)"),
-        dcc.Dropdown(
-            id="nba-stats-with-dropdown",
-            options=[],  # filled by callback
-            value=None,
-            placeholder="Select a teammate (filters dates where both played)",
-            style={"marginBottom": "12px"},
-            persistence=True,
-            persistence_type="session",
-            clearable=True,
-        ),
-
-        # NEW: Without teammate
-        html.Label("WITHOUT (same team)"),
-        dcc.Dropdown(
-            id="nba-stats-without-dropdown",
-            options=[],  # filled by callback
-            value=None,
-            placeholder="Select a teammate (filters dates where teammate did NOT play)",
-            style={"marginBottom": "12px"},
-            persistence=True,
-            persistence_type="session",
-            clearable=True,
         ),
 
         html.Label("Statistic"),
@@ -277,6 +252,7 @@ layout = html.Div([
             persistence_type="session",
         ),
 
+        # Threshold block
         html.Label("Threshold (set using the slider)"),
 
         html.Div(
@@ -288,7 +264,7 @@ layout = html.Div([
                 "borderRadius": "4px",
                 "backgroundColor": "#f8f9fa",
                 "fontSize": "14px",
-                "color": "#333"
+                "color": "#333",
             }
         ),
 
@@ -310,6 +286,32 @@ layout = html.Div([
             style={"marginTop": "8px", "color": "#666", "fontSize": "12px"},
         ),
 
+        # ✅ NEW DROPDOWNS (moved here)
+        html.Label("WITH (same team)"),
+        dcc.Dropdown(
+            id="nba-stats-with-dropdown",
+            options=[],  # populated by callback
+            value=None,
+            placeholder="Select a teammate (filters dates where both played)",
+            style={"marginBottom": "12px"},
+            persistence=True,
+            persistence_type="session",
+            clearable=True,
+        ),
+
+        html.Label("WITHOUT (same team)"),
+        dcc.Dropdown(
+            id="nba-stats-without-dropdown",
+            options=[],  # populated by callback
+            value=None,
+            placeholder="Select a teammate (filters dates where teammate did NOT play)",
+            style={"marginBottom": "12px"},
+            persistence=True,
+            persistence_type="session",
+            clearable=True,
+        ),
+
+        # Schedule block (below WITH/WITHOUT)
         html.Div(
             [
                 html.Label("Schedule Filters", style={"marginTop": "10px"}),
@@ -337,12 +339,13 @@ layout = html.Div([
             style={"marginTop": "6px"},
         ),
 
+        # Status / errors
         html.Div(
             id="nba-data-load-status",
             style={"marginTop": "12px", "color": "#b00020", "fontSize": "12px"},
         ),
 
-        # trigger for initial load (your callbacks file can use this)
+        # Initial load trigger (used by callbacks file)
         dcc.Interval(id="nba-init", interval=500, n_intervals=0, max_intervals=1),
     ],
     style={
