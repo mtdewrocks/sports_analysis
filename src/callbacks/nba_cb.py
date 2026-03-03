@@ -102,7 +102,6 @@ def apply_schedule_filters(sub: pd.DataFrame, b2b_toggle, three_in_four_toggle) 
         if "back_to_back" in sub.columns:
             sub = sub[sub["back_to_back"] == 1]
         else:
-            # Column missing => return empty to make the UI show "no games"
             return sub.iloc[0:0]
 
     # 3rd game in 4 nights filter
@@ -116,6 +115,152 @@ def apply_schedule_filters(sub: pd.DataFrame, b2b_toggle, three_in_four_toggle) 
 
 
 # -------------------------------------------------
+# NEW Helpers: Team + WITH/WITHOUT filters
+# -------------------------------------------------
+def _first_existing_col(df: pd.DataFrame, candidates: list[str]) -> str | None:
+    for c in candidates:
+        if c in df.columns:
+            return c
+    return None
+
+
+def _latest_team_for_player(df: pd.DataFrame, team_col: str, player: str) -> str | None:
+    """
+    For traded players, pick team from the most recent game_date.
+    Prefer rows where played==1 if available.
+    """
+    if not player or team_col not in df.columns or date_col not in df.columns:
+        return None
+
+    tmp = df[df[player_col] == player].copy()
+    if tmp.empty:
+        return None
+
+    tmp[date_col] = pd.to_datetime(tmp[date_col], errors="coerce")
+    tmp = tmp.dropna(subset=[date_col, team_col])
+
+    if tmp.empty:
+        return None
+
+    if "played" in tmp.columns:
+        tmp_played = tmp[tmp["played"] == 1]
+        if not tmp_played.empty:
+            tmp = tmp_played
+
+    tmp = tmp.sort_values(date_col)
+    return str(tmp.iloc[-1][team_col])
+
+
+def teammates_for_player(df: pd.DataFrame, player: str) -> list[str]:
+    """
+    Returns other players on the same team as the selected player (based on latest team).
+    Falls back to all other players if no team column is available.
+    """
+    if not player:
+        return []
+
+    team_col = _first_existing_col(df, ["team", "team_abbreviation", "tm", "team_name", "team_id"])
+    if not team_col:
+        # fallback: all other players
+        return sorted([p for p in df[player_col].dropna().unique() if p != player])
+
+    team_val = _latest_team_for_player(df, team_col, player)
+    if not team_val:
+        return sorted([p for p in df[player_col].dropna().unique() if p != player])
+
+    team_mask = df[team_col].astype(str) == str(team_val)
+    players = df.loc[team_mask, player_col].dropna().unique().tolist()
+    return sorted([p for p in players if p != player])
+
+
+def apply_with_without_filters(
+    df: pd.DataFrame,
+    main_player: str,
+    with_player: str | None,
+    without_player: str | None,
+) -> tuple[pd.DataFrame, str]:
+    """
+    Returns:
+      - filtered MAIN PLAYER rows only
+      - suffix label for titles/notes
+
+    Requires df to have 'played' column.
+    """
+    if not main_player:
+        return df.iloc[0:0].copy(), ""
+
+    if "played" not in df.columns:
+        raise ValueError("Missing required column 'played' in NBA dataset.")
+
+    # main player rows
+    sub = df[df[player_col] == main_player].copy()
+
+    # Default: only games where main actually played
+    if not with_player and not without_player:
+        sub = sub[sub["played"] == 1]
+        return sub, ""
+
+    suffix_parts = []
+
+    # WITH: dates where main + with both played -> sum(played)==2 for that date among those 2 players
+    if with_player:
+        pair = df[df[player_col].isin([main_player, with_player])].copy()
+        g = pair.groupby(date_col, dropna=False)["played"].sum()
+        with_dates = set(g[g == 2].index.tolist())
+        sub = sub[sub[date_col].isin(with_dates)]
+        suffix_parts.append(f"WITH: {with_player}")
+
+    # WITHOUT: main played==1 AND without_player did NOT play that date (missing or played==0)
+    if without_player:
+        without_played_dates = set(
+            df.loc[(df[player_col] == without_player) & (df["played"] == 1), date_col]
+            .dropna()
+            .unique()
+            .tolist()
+        )
+        sub = sub[(sub["played"] == 1) & (~sub[date_col].isin(without_played_dates))]
+        suffix_parts.append(f"WITHOUT: {without_player}")
+
+    suffix = " | " + " & ".join(suffix_parts) if suffix_parts else ""
+    return sub, suffix
+
+
+# -------------------------------------------------
+# NEW: Populate WITH/WITHOUT dropdown options (same team)
+# -------------------------------------------------
+@callback(
+    Output("nba-stats-with-dropdown", "options"),
+    Output("nba-stats-without-dropdown", "options"),
+    Output("nba-stats-with-dropdown", "value"),
+    Output("nba-stats-without-dropdown", "value"),
+    Input("nba-stats-player-dropdown", "value"),
+    Input("nba-stats-with-dropdown", "value"),
+    Input("nba-stats-without-dropdown", "value"),
+)
+def update_with_without_dropdowns(main_player, current_with, current_without):
+    if not main_player:
+        return [], [], None, None
+
+    df = get_nba_df()
+    if df is None or df.empty:
+        return [], [], None, None
+
+    teammates = teammates_for_player(df, main_player)
+    opts = [{"label": p, "value": p} for p in teammates]
+    valid = set(teammates)
+
+    # clear invalid selections if player/team changed
+    new_with = current_with if current_with in valid else None
+    new_without = current_without if current_without in valid else None
+
+    # optional: prevent same player selected in both
+    if new_with and new_without and new_with == new_without:
+        new_without = None
+
+    return opts, opts, new_with, new_without
+
+
+# -------------------------------------------------
 # Slider update callback
 # -------------------------------------------------
 @callback(
@@ -126,26 +271,32 @@ def apply_schedule_filters(sub: pd.DataFrame, b2b_toggle, three_in_four_toggle) 
     Output("nba-stats-range-note", "children"),
     Input("nba-stats-player-dropdown", "value"),
     Input("nba-stats-stat-dropdown", "value"),
-    Input("nba-b2b-toggle", "value"),     # ✅ NEW
-    Input("nba-3in4-toggle", "value"),    # ✅ NEW
+    Input("nba-stats-with-dropdown", "value"),      # ✅ NEW
+    Input("nba-stats-without-dropdown", "value"),   # ✅ NEW
+    Input("nba-b2b-toggle", "value"),
+    Input("nba-3in4-toggle", "value"),
 )
-def stats_update_slider_props(player, stat_col, b2b_toggle, three_in_four_toggle):
-    print("SLIDER CALLBACK — Player:", player, "Stat:", stat_col,
-          "B2B:", b2b_toggle, "3in4:", three_in_four_toggle, flush=True)
+def stats_update_slider_props(player, stat_col, with_player, without_player, b2b_toggle, three_in_four_toggle):
+    print(
+        "SLIDER CALLBACK — Player:", player, "Stat:", stat_col,
+        "WITH:", with_player, "WITHOUT:", without_player,
+        "B2B:", b2b_toggle, "3in4:", three_in_four_toggle,
+        flush=True
+    )
 
     if not player or not stat_col:
         return 0, 25, {}, 10, "Select a player and stat to begin."
 
     df_stats = get_nba_df()
+    if df_stats is None or df_stats.empty:
+        return 0, 25, {}, 10, "Data file is missing or empty."
 
-    # Filter to player first (smaller)
-    sub = df_stats[df_stats[player_col] == player]
-
-    # Apply schedule filters
+    # Apply WITH/WITHOUT first (then schedule)
+    sub, suffix = apply_with_without_filters(df_stats, player, with_player, without_player)
     sub = apply_schedule_filters(sub, b2b_toggle, three_in_four_toggle)
 
     if sub.empty:
-        msg = "No games found for this player with the selected schedule filter(s)."
+        msg = f"No games found for this player with the selected filters.{suffix}"
         return 0, 25, {}, 10, msg
 
     if stat_col not in sub.columns:
@@ -162,7 +313,7 @@ def stats_update_slider_props(player, stat_col, b2b_toggle, three_in_four_toggle
     marks = {v: str(v) for v in range(vmin, vmax + 1, step)}
     default_value = int((vmin + vmax) / 2)
 
-    return vmin, vmax, marks, default_value, f"Range based on selected data: {vmin} to {vmax}."
+    return vmin, vmax, marks, default_value, f"Range based on selected data: {vmin} to {vmax}.{suffix}"
 
 
 # -------------------------------------------------
@@ -187,13 +338,19 @@ def show_threshold(slider_value):
     Output("nba-stats-rates-footnote", "children"),
     Input("nba-stats-player-dropdown", "value"),
     Input("nba-stats-stat-dropdown", "value"),
+    Input("nba-stats-with-dropdown", "value"),      # ✅ NEW
+    Input("nba-stats-without-dropdown", "value"),   # ✅ NEW
     Input("nba-stats-threshold-slider", "value"),
-    Input("nba-b2b-toggle", "value"),     # ✅ NEW
-    Input("nba-3in4-toggle", "value"),    # ✅ NEW
+    Input("nba-b2b-toggle", "value"),
+    Input("nba-3in4-toggle", "value"),
 )
-def stats_update_chart_and_counts(player, stat_col, threshold, b2b_toggle, three_in_four_toggle):
-    print("CHART CALLBACK — Player:", player, "Stat:", stat_col, "Threshold:", threshold,
-          "B2B:", b2b_toggle, "3in4:", three_in_four_toggle, flush=True)
+def stats_update_chart_and_counts(player, stat_col, with_player, without_player, threshold, b2b_toggle, three_in_four_toggle):
+    print(
+        "CHART CALLBACK — Player:", player, "Stat:", stat_col, "Threshold:", threshold,
+        "WITH:", with_player, "WITHOUT:", without_player,
+        "B2B:", b2b_toggle, "3in4:", three_in_four_toggle,
+        flush=True
+    )
 
     if not stat_col:
         return empty_fig("Please select a statistic.")
@@ -205,14 +362,15 @@ def stats_update_chart_and_counts(player, stat_col, threshold, b2b_toggle, three
     if not player:
         return empty_fig("Select a player to view game-by-game stats.")
 
-    # Filter to player first
-    sub = df_stats[df_stats[player_col] == player].copy()
-
-    # Apply schedule filters
+    # Apply WITH/WITHOUT first (then schedule)
+    sub, suffix = apply_with_without_filters(df_stats, player, with_player, without_player)
     sub = apply_schedule_filters(sub, b2b_toggle, three_in_four_toggle)
 
     if sub.empty:
-        return empty_fig("No games found for this player with the selected schedule filter(s).")
+        return empty_fig(f"No games found for this player with the selected filter(s).{suffix}")
+
+    if stat_col not in sub.columns:
+        return empty_fig("Selected stat not found in data.")
 
     # Ensure numeric stat
     sub[stat_col] = pd.to_numeric(sub[stat_col], errors="coerce")
@@ -271,7 +429,7 @@ def stats_update_chart_and_counts(player, stat_col, threshold, b2b_toggle, three
     )
 
     fig.update_layout(
-        title=f"{player_label} — {stat_col.upper()} by Game",
+        title=f"{player_label} — {stat_col.upper()} by Game{suffix}",
         xaxis_title="Game",
         yaxis_title=stat_col.upper(),
         template="simple_white",
@@ -290,7 +448,7 @@ def stats_update_chart_and_counts(player, stat_col, threshold, b2b_toggle, three
     over_pct = (100 * over_count / total_games) if total_games else 0
 
     summary = html.Div([
-        html.Strong(f"{player_label} — {stat_col.upper()}"),
+        html.Strong(f"{player_label} — {stat_col.upper()}{suffix}"),
         html.Div(f"Games shown: {total_games}"),
         html.Div(f"Over threshold: {over_count} ({over_pct:.1f}%)", style={"color": "#1f77b4"}),
         html.Div(f"Below threshold: {under_count}", style={"color": "#d62728"}),
@@ -309,8 +467,15 @@ def stats_update_chart_and_counts(player, stat_col, threshold, b2b_toggle, three
 
     table = build_table(all_counts, home_counts, away_counts)
 
-    footnote = ""
+    footnote_parts = []
     if total_games < 10:
-        footnote = f"Total games for {player_label}: {total_games} (fewer than 10 observations)."
+        footnote_parts.append(f"Total games for {player_label}: {total_games} (fewer than 10 observations).")
+
+    if with_player:
+        footnote_parts.append("WITH filter: dates where both players played (sum(played)=2 for that date across the two players).")
+    if without_player:
+        footnote_parts.append("WITHOUT filter: dates where main player played and the other player did not (missing row or played==0).")
+
+    footnote = " ".join(footnote_parts)
 
     return fig, summary, table, footnote

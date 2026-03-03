@@ -1,8 +1,9 @@
+# pages/nba.py
 import os
 from functools import lru_cache
 
 import pandas as pd
-from dash import html, dcc, register_page, callback, Input, Output
+from dash import html, dcc, register_page
 
 # -------------------------------------------------
 # Register Dash Page
@@ -17,14 +18,12 @@ register_page(
 # -------------------------------------------------
 # Data config (do NOT load at import time)
 # -------------------------------------------------
-
-# Keep your URL as a default; allow override via Render env var
 DEFAULT_STATS_FILE = "https://raw.githubusercontent.com/mtdewrocks/sports_analysis/main/data/NBA_Player_Stats.parquet"
 STATS_FILE = os.getenv("NBA_STATS_FILE", DEFAULT_STATS_FILE)
 
 player_col = "player"
 date_col = "game_date"
-location_col = "location"
+location_col = "location"  # optional
 
 available_stats = {
     "pts": "pts",
@@ -41,11 +40,166 @@ available_stats = {
     "pts_reb": "pts_reb",
 }
 
+# -------------------------------------------------
+# Helpers (import these from your callbacks file)
+# -------------------------------------------------
+def stats_stat_options():
+    return [{"label": k.upper(), "value": v} for k, v in available_stats.items()]
 
-@lru_cache(maxsize=1)
-def get_df_stats():
+
+def _first_existing_col(df: pd.DataFrame, candidates: list[str]) -> str | None:
+    for c in candidates:
+        if c in df.columns:
+            return c
+    return None
+
+
+def _ensure_datetime(s: pd.Series) -> pd.Series:
+    return pd.to_datetime(s, errors="coerce")
+
+
+def _get_latest_team_for_player(df: pd.DataFrame, team_col: str, player: str) -> str | None:
     """
-    Load stats once per process. This is safe on Render because it only runs
+    For traded players, choose the most recent team based on latest game_date.
+    Prefers rows where played==1 if available.
+    """
+    if not player or team_col not in df.columns or date_col not in df.columns:
+        return None
+
+    tmp = df[df[player_col] == player].copy()
+    if tmp.empty:
+        return None
+
+    tmp["_dt"] = _ensure_datetime(tmp[date_col])
+
+    if "played" in tmp.columns:
+        tmp_played = tmp[tmp["played"] == 1]
+        if not tmp_played.empty:
+            tmp = tmp_played
+
+    tmp = tmp.dropna(subset=["_dt", team_col])
+    if tmp.empty:
+        return None
+
+    tmp = tmp.sort_values("_dt")
+    return str(tmp.iloc[-1][team_col])
+
+
+def team_teammates_options(df: pd.DataFrame, selected_player: str) -> list[dict]:
+    """
+    Returns teammate dropdown options limited to the selected player's (latest) team.
+    If no team column exists, falls back to all players.
+    """
+    if not selected_player:
+        return []
+
+    team_col = _first_existing_col(df, ["team", "team_abbreviation", "tm", "team_name", "team_id"])
+    if not team_col:
+        players = sorted([p for p in df[player_col].dropna().unique() if p != selected_player])
+        return [{"label": p, "value": p} for p in players]
+
+    team_val = _get_latest_team_for_player(df, team_col, selected_player)
+    if not team_val:
+        players = sorted([p for p in df[player_col].dropna().unique() if p != selected_player])
+        return [{"label": p, "value": p} for p in players]
+
+    teammates = (
+        df.loc[df[team_col].astype(str) == str(team_val), player_col]
+        .dropna()
+        .unique()
+        .tolist()
+    )
+    teammates = sorted([p for p in teammates if p != selected_player])
+    return [{"label": p, "value": p} for p in teammates]
+
+
+def apply_with_without_filters(
+    df: pd.DataFrame,
+    main_player: str,
+    with_player: str | None,
+    without_player: str | None,
+) -> tuple[pd.DataFrame, str]:
+    """
+    Returns:
+      - df_main_filtered: MAIN PLAYER rows only, filtered by with/without logic
+      - label_suffix: text describing filter applied (for chart title / footnote)
+
+    WITH:
+      Keep dates where sum(played) across [main, with_player] == 2
+      Then keep only main_player rows for those dates.
+
+    WITHOUT:
+      Keep dates where main_player played (played==1) AND without_player did NOT play that date
+      (missing row OR played==0). In practice: exclude dates where without_player played==1.
+    """
+    if not main_player:
+        return df.iloc[0:0].copy(), ""
+
+    if "played" not in df.columns:
+        raise ValueError("Missing required column: 'played'")
+
+    df_main = df[df[player_col] == main_player].copy()
+
+    # sensible default: main player's games where played==1
+    if not with_player and not without_player:
+        df_main = df_main[df_main["played"] == 1]
+        return df_main, ""
+
+    suffix_parts = []
+
+    # ---- WITH logic ----
+    if with_player:
+        df_pair = df[df[player_col].isin([main_player, with_player])].copy()
+        g = df_pair.groupby(date_col, dropna=False)["played"].sum()
+        with_dates = set(g[g == 2].index.tolist())
+
+        df_main = df_main[df_main[date_col].isin(with_dates)]
+        suffix_parts.append(f"WITH: {with_player}")
+
+    # ---- WITHOUT logic ----
+    if without_player:
+        without_played_dates = set(
+            df.loc[
+                (df[player_col] == without_player) & (df["played"] == 1),
+                date_col
+            ].dropna().unique().tolist()
+        )
+
+        df_main = df_main[(df_main["played"] == 1) & (~df_main[date_col].isin(without_played_dates))]
+        suffix_parts.append(f"WITHOUT: {without_player}")
+
+    suffix = " | " + " & ".join(suffix_parts) if suffix_parts else ""
+    return df_main, suffix
+
+
+def apply_schedule_filters(df_main: pd.DataFrame, b2b_values: list, in3in4_values: list) -> pd.DataFrame:
+    """
+    Applies optional schedule toggles if corresponding columns exist.
+    """
+    df_out = df_main.copy()
+
+    # B2B: "2nd night of back-to-back only"
+    if "b2b2" in (b2b_values or []):
+        b2b_col = _first_existing_col(df_out, ["back_to_back", "b2b", "b2b_2nd", "b2b2"])
+        if b2b_col:
+            df_out = df_out[df_out[b2b_col] == 1]
+
+    # 3 in 4: "3rd game in 4 nights only"
+    if "3in4" in (in3in4_values or []):
+        in3in4_col = _first_existing_col(df_out, ["third_in_four", "third_in_4", "three_in_four", "3in4"])
+        if in3in4_col:
+            df_out = df_out[df_out[in3in4_col] == 1]
+
+    return df_out
+
+
+# -------------------------------------------------
+# Data loader (safe: runs only when called)
+# -------------------------------------------------
+@lru_cache(maxsize=1)
+def get_df_stats() -> pd.DataFrame:
+    """
+    Load stats once per process. Safe on Render because it only runs
     when a callback needs it, not during module import.
     """
     print(f"[NBA] cwd={os.getcwd()}", flush=True)
@@ -60,18 +214,16 @@ def get_df_stats():
         .str.replace(" ", "_")
     )
 
-    # Optional: quick sanity checks in logs
     print(f"[NBA] Loaded rows={len(df):,} cols={len(df.columns)}", flush=True)
+
+    if date_col in df.columns:
+        df[date_col] = pd.to_datetime(df[date_col], errors="coerce")
 
     return df
 
 
-def stats_stat_options():
-    return [{"label": k.upper(), "value": v} for k, v in available_stats.items()]
-
-
 # -------------------------------------------------
-# PAGE LAYOUT
+# PAGE LAYOUT (no callbacks here)
 # -------------------------------------------------
 layout = html.Div([
 
@@ -82,11 +234,37 @@ layout = html.Div([
         html.Label("Player"),
         dcc.Dropdown(
             id="nba-stats-player-dropdown",
-            options=[],  # ✅ filled by callback below
+            options=[],  # filled by callback in your other file
             placeholder="Select a player",
             style={"marginBottom": "12px"},
             persistence=True,
             persistence_type="session",
+        ),
+
+        # NEW: With teammate
+        html.Label("WITH (same team)"),
+        dcc.Dropdown(
+            id="nba-stats-with-dropdown",
+            options=[],  # filled by callback
+            value=None,
+            placeholder="Select a teammate (filters dates where both played)",
+            style={"marginBottom": "12px"},
+            persistence=True,
+            persistence_type="session",
+            clearable=True,
+        ),
+
+        # NEW: Without teammate
+        html.Label("WITHOUT (same team)"),
+        dcc.Dropdown(
+            id="nba-stats-without-dropdown",
+            options=[],  # filled by callback
+            value=None,
+            placeholder="Select a teammate (filters dates where teammate did NOT play)",
+            style={"marginBottom": "12px"},
+            persistence=True,
+            persistence_type="session",
+            clearable=True,
         ),
 
         html.Label("Statistic"),
@@ -99,13 +277,8 @@ layout = html.Div([
             persistence_type="session",
         ),
 
-        # -------------------------------------------------
-        # ✅ NEW: stacked schedule filter toggles
-        # -------------------------------------------------
-
         html.Label("Threshold (set using the slider)"),
 
-        # Display-only threshold box
         html.Div(
             id="nba-threshold-display",
             style={
@@ -136,6 +309,7 @@ layout = html.Div([
             id="nba-stats-range-note",
             style={"marginTop": "8px", "color": "#666", "fontSize": "12px"},
         ),
+
         html.Div(
             [
                 html.Label("Schedule Filters", style={"marginTop": "10px"}),
@@ -163,13 +337,12 @@ layout = html.Div([
             style={"marginTop": "6px"},
         ),
 
-        # ✅ Optional: show load errors on the page instead of crashing deploy
         html.Div(
             id="nba-data-load-status",
             style={"marginTop": "12px", "color": "#b00020", "fontSize": "12px"},
         ),
 
-        # hidden trigger to load players after page render
+        # trigger for initial load (your callbacks file can use this)
         dcc.Interval(id="nba-init", interval=500, n_intervals=0, max_intervals=1),
     ],
     style={
@@ -204,23 +377,3 @@ layout = html.Div([
     ],
     style={"marginLeft": "24%", "padding": "20px"}),
 ])
-
-
-# -------------------------------------------------
-# Callback: populate player dropdown safely (no import-time load)
-# -------------------------------------------------
-@callback(
-    Output("nba-stats-player-dropdown", "options"),
-    Output("nba-data-load-status", "children"),
-    Input("nba-init", "n_intervals"),
-)
-def populate_players(_):
-    try:
-        df_stats = get_df_stats()
-        players = sorted(df_stats[player_col].dropna().unique())
-        opts = [{"label": p, "value": p} for p in players]
-        return opts, ""  # no error
-    except Exception as e:
-        # Keep app alive and show error on the page + in logs
-        print(f"[NBA] ERROR loading data: {type(e).__name__}: {e}", flush=True)
-        return [], f"Error loading NBA data: {type(e).__name__}: {e}"
