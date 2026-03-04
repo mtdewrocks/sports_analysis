@@ -287,24 +287,24 @@ layout = html.Div([
         ),
 
         # ✅ NEW DROPDOWNS (moved here)
-        html.Label("WITH (same team)"),
+        html.Label("Games With:"),
         dcc.Dropdown(
             id="nba-stats-with-dropdown",
             options=[],  # populated by callback
             value=None,
-            placeholder="Select a teammate (filters dates where both played)",
+            placeholder="Select a teammate.",
             style={"marginBottom": "12px"},
             persistence=True,
             persistence_type="session",
             clearable=True,
         ),
 
-        html.Label("WITHOUT (same team)"),
+        html.Label("Games Without:"),
         dcc.Dropdown(
             id="nba-stats-without-dropdown",
             options=[],  # populated by callback
             value=None,
-            placeholder="Select a teammate (filters dates where teammate did NOT play)",
+            placeholder="Select a teammate.",
             style={"marginBottom": "12px"},
             persistence=True,
             persistence_type="session",
