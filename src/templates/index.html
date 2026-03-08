@@ -1,16 +1,205 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sports Analytics Dashboard</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #f7f7f7;
+            color: #222;
+        }
+
+        /* Navbar */
+        .navbar {
+            display: flex;
+            align-items: center;
+            gap: 30px;
+            background-color: #111827;
+            padding: 16px 40px;
+            color: white;
+        }
+
+        .nav-item,
+        .dropdown-title {
+            color: white;
+            text-decoration: none;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .nav-item:hover,
+        .dropdown-title:hover {
+            color: #93c5fd;
+        }
+
+        .dropdown {
+            position: relative;
+            display: inline-block;
+        }
+
+        .dropdown-menu {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            min-width: 180px;
+            background: white;
+            box-shadow: 0 4px 14px rgba(0,0,0,0.15);
+            border-radius: 8px;
+            z-index: 1000;
+            overflow: hidden;
+        }
+
+        .dropdown:hover .dropdown-menu {
+            display: block;
+        }
+
+        .dropdown-link {
+            display: block;
+            padding: 12px 16px;
+            color: #222;
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .dropdown-link:hover {
+            background: #f3f4f6;
+        }
+
+        /* Main content */
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 50px 30px;
+        }
+
+        .hero {
+            background: white;
+            border-radius: 14px;
+            padding: 40px;
+            box-shadow: 0 4px 14px rgba(0,0,0,0.08);
+        }
+
+        .hero h1 {
+            margin-top: 0;
+            font-size: 2.2rem;
+        }
+
+        .hero p {
+            font-size: 1.05rem;
+            line-height: 1.6;
+        }
+
+        .dashboard-list {
+            margin-top: 25px;
+            padding-left: 20px;
+        }
+
+        .dashboard-list li {
+            margin-bottom: 12px;
+        }
+
+        .dashboard-list a {
+            color: #2563eb;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .dashboard-list a:hover {
+            text-decoration: underline;
+        }
+
+        /* Footer */
+        .footer {
+            margin-top: 60px;
+            background: #111827;
+            color: white;
+            text-align: center;
+            padding: 30px 20px;
+        }
+
+        .contact-button {
+            display: inline-block;
+            margin-top: 12px;
+            background: #2563eb;
+            color: white;
+            text-decoration: none;
+            padding: 12px 22px;
+            border-radius: 8px;
+            font-weight: 600;
+        }
+
+        .contact-button:hover {
+            background: #1d4ed8;
+        }
+    </style>
 </head>
-<body style="font-family: Arial; padding: 40px;">
-    <h1>Welcome to the Sports Analytics Dashboard</h1>
-    <p>Select a dashboard:</p>
-    <ul>
-        <li><a href="/dash/nba">NBA Game Log</a></li>
-        <li><a href="/dash/nfl-game-logs">NFL Game Log</a></li>
-	<li><a href="/dash/nba_in_out">NBA In/Out</a></li>
-	<li><a href="/dash/nba_props">NBA Props</a></li>
-    </ul>
+<body>
+
+    <!-- Navbar -->
+    <div class="navbar">
+        <a href="https://sports-prop-research.onrender.com/" class="nav-item">Home</a>
+
+        <div class="dropdown">
+            <div class="dropdown-title">NFL</div>
+            <div class="dropdown-menu">
+                <a href="/dash/nfl-matchups" class="dropdown-link">Game Matchup</a>
+                <a href="/dash/nfl-game-logs" class="dropdown-link">Game Log</a>
+                <a href="/dash/nfl/dashboard3" class="dropdown-link">Dashboard 3</a>
+            </div>
+        </div>
+
+        <div class="dropdown">
+            <div class="dropdown-title">NBA</div>
+            <div class="dropdown-menu">
+                <a href="/dash/nba" class="dropdown-link">Game Logs</a>
+                <a href="/dash/nba_in_out" class="dropdown-link">In/Out Analysis</a>
+                <a href="/dash/nba_props" class="dropdown-link">NBA Props</a>
+            </div>
+        </div>
+
+        <div class="dropdown">
+            <div class="dropdown-title">MLB</div>
+            <div class="dropdown-menu">
+                <a href="/dash/mlb/matchup" class="dropdown-link">Matchup</a>
+                <a href="/dash/mlb/hot-hitters" class="dropdown-link">Hot Hitters</a>
+                <a href="/dash/mlb/props" class="dropdown-link">Props</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main content -->
+    <div class="container">
+        <div class="hero">
+            <h1>Welcome to the Sports Analytics Dashboard</h1>
+
+            <p>
+                Explore interactive dashboards for NBA, NFL, and MLB analytics.
+                These tools are designed to help analyze player performance, game logs,
+                matchups, props, and lineup impacts in a more data-driven way.
+            </p>
+
+            <p>
+                Use the navigation bar above to browse available dashboards, or start with one below:
+            </p>
+
+            <ul class="dashboard-list">
+                <li><a href="/dash/nba">NBA Game Log</a></li>
+                <li><a href="/dash/nfl-game-logs">NFL Game Log</a></li>
+                <li><a href="/dash/nba_in_out">NBA In/Out</a></li>
+                <li><a href="/dash/nba_props">NBA Props</a></li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+        <p>Questions, suggestions, or interested in working together?</p>
+        <a href="mailto:youremail@example.com" class="contact-button">Contact Me</a>
+    </div>
+
 </body>
 </html>
