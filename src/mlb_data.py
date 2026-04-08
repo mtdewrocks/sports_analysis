@@ -7,17 +7,17 @@ import pandas as pd
 # -------------------------------------------------
 DATA_BASE_RAW = os.getenv(
     "MLB_DATA_BASE_RAW",
-    "https://github.com/mtdewrocks/matchup/raw/main/assets"
+    "https://github.com/mtdewrocks/sports-analytics/raw/main/backend/data/mlb"
 )
 
 MLB_IMAGE_BASE = os.getenv(
     "MLB_IMAGE_BASE",
-    "https://github.com/mtdewrocks/matchup/raw/main/assets"
+    "https://github.com/mtdewrocks/sports-analytics/raw/main/backend/data/mlb/pitcher_images"
 )
 
 PITCHER_SEASON_STATS_URL = f"{DATA_BASE_RAW}/Pitcher_Season_Stats.xlsx"
 HIST_STARTING_PITCHERS_URL = f"{DATA_BASE_RAW}/Historical_Starting_Pitchers.xlsx"
-PITCHING_LOGS_URL = f"{DATA_BASE_RAW}/2025_Pitching_Logs.xlsx"
+PITCHING_LOGS_URL = f"{DATA_BASE_RAW}/2026_Pitching_Logs.xlsx"
 SEASON_SPLITS_URL = f"{DATA_BASE_RAW}/Season_Aggregated_Pitcher_Statistics.xlsx"
 PITCHER_PCT_URL = f"{DATA_BASE_RAW}/Pitcher_Percentile_Rankings.csv"
 LAST_WEEK_URL = f"{DATA_BASE_RAW}/Last_Week_Stats.xlsx"
@@ -30,7 +30,24 @@ MY_HITTER_LIST_URL = f"{DATA_BASE_RAW}/My_Hitter_Listing.xlsx"
 # -------------------------------------------------
 # LOAD DATA (module import time = once per server start)
 # -------------------------------------------------
-df = pd.read_excel(PITCHER_SEASON_STATS_URL, usecols=["Name", "W", "L", "ERA", "IP", "SO", "WHIP", "GS"])
+
+# Build season stats by aggregating from game logs
+df_raw_logs = pd.read_excel(
+    PITCHING_LOGS_URL,
+    usecols=["Name", "Date", "W", "L", "ERA", "GS", "IP", "SO", "WHIP"]
+)
+df_raw_logs["Date"] = pd.to_datetime(df_raw_logs["Date"])
+# ERA, W, L, WHIP are season-cumulative — take from the most recent game
+df_latest = (
+    df_raw_logs.sort_values("Date", ascending=False)
+    .groupby("Name").first().reset_index()
+    [["Name", "W", "L", "ERA", "WHIP"]]
+)
+# IP, SO, GS are per-game — sum across all games
+df_totals = df_raw_logs.groupby("Name").agg(
+    IP=("IP", "sum"), SO=("SO", "sum"), GS=("GS", "sum")
+).reset_index()
+df = df_latest.merge(df_totals, on="Name")
 df["K/IP"] = (df["SO"] / df["IP"]).round(2)
 df["WHIP"] = df["WHIP"].round(2)
 
@@ -44,10 +61,10 @@ df = df[["Name", "Baseball_Savant_Name", "Handedness", "GS", "W", "L", "ERA", "I
 
 dfGameLogs = pd.read_excel(
     PITCHING_LOGS_URL,
-    usecols=["Name", "Date", "Opp", "W", "L", "IP", "BF", "H", "R", "ER", "HR", "BB", "SO", "Pit"]
+    usecols=["Name", "Date", "OPP", "W", "L", "IP", "H", "R", "ER", "HR", "BB", "SO", "Total_Pitches"]
 )
 dfGameLogs["Date"] = pd.to_datetime(dfGameLogs["Date"], format="%Y-%m-%d").dt.date
-dfGameLogs = dfGameLogs.rename(columns={"Opp": "Opponent"}).sort_values(by="Date", ascending=False)
+dfGameLogs = dfGameLogs.rename(columns={"OPP": "Opponent", "Total_Pitches": "Pit"}).sort_values(by="Date", ascending=False)
 
 dfS = pd.read_excel(SEASON_SPLITS_URL)
 dfSplits = pd.melt(
